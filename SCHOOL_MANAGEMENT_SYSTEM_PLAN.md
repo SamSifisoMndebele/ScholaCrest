@@ -1,181 +1,180 @@
 # 🏫 Multi-Tenant School Management System (SaaS)
-## Architecture, Lowest-Cost Firebase Strategy & System Plan
+## Strategic Architecture: Tiered Cloudflare + Firebase + Zero-Trust App Check
 
 ---
 
-### 1. Executive Summary & Goals
+### 1. Strategic Multi-Database & Multi-Storage Decision Engine
 
-This system is a **multi-tenant School Management System (SMS)** engineered to serve multiple schools under a central Super-Admin console. It handles the complete lifecycle:
-1. **School Onboarding & Setup:** Super-Admin registers and activates schools; School Admins configure branding, letterhead, grades, and subjects.
-2. **Automated & Manual Admissions:** Online learner application $\rightarrow$ Instant App Evaluation (Automated Rules Engine) $\rightarrow$ Registrar Verification $\rightarrow$ Acceptance & Enrolment.
-3. **Official School Letterhead Engine:** Dynamic, official letter generation (with crest, signature, stamp, date, ref number) at every application step without storage fees.
-4. **Academic Portal:** Subjects, teacher content/homework upload, student homework viewer.
-5. **Assessment & Report Card Engine:** Subject marks entry, automated term aggregation, and official downloadable term reports.
-6. **Zero-Waste / Lowest-Cost Firebase Architecture:** Specifically engineered to stay well within Firebase's free tier (Spark/Blaze free limits) and minimize billable reads, writes, compute, and storage.
-
----
-
-### 2. Lowest-Cost Firebase Engineering Blueprint
-
-Firebase is extraordinarily fast and scalable, but unoptimized designs (e.g., storing generated PDFs in Storage, unindexed queries, chatty reads, cross-document security rules) lead to unnecessary bills. Here is how we guarantee the **lowest possible operating cost**:
-
-| Component | Common Expensive Anti-Pattern | **Our Ultra-Low Cost Design** | Cost Impact |
-| :--- | :--- | :--- | :--- |
-| **Document Storage (Letterheads, Letters & Reports)** | Generating PDFs on Cloud Functions and saving binary `.pdf` files to Cloud Storage ($0.026/GB + transfer). | **Client-Side Generation (HTML5 Print & `jspdf`/CSS Print):** Store only lightweight JSON data in Firestore (~1KB). Render pixel-perfect letterheads and report cards directly in the browser. | **$0 Storage & $0 Bandwidth** |
-| **Firestore Reads** | Fetching individual records repeatedly on every page navigation. | **Enable `persistentLocalCache` (IndexedDB):** Cache all static/semi-static data (subjects, school profile, terms) locally in browser. Zero reads on repeat views. | **Reduces billable reads by 70–85%** |
-| **Data Aggregation (Report Cards)** | Querying 50+ individual assignment/test docs per student to calculate term averages. | **Denormalized Term Summary Docs:** Subject teachers write to student's `termGrades/{termId}`, storing a summary object. Reading a report card requires exactly **1 Firestore Read**. | **98% read reduction per report** |
-| **Authentication & RBAC** | Storing roles in Firestore and calling `get(/databases/.../users/$(request.auth.uid))` in Security Rules (which costs 1 billable read per rule evaluation). | **Firebase Auth Custom Claims / User Token context:** Embed `schoolId` and `role` directly in the Auth JWT token or structured user doc. Security rules check `request.auth.token.role` with **0 Firestore Reads**. | **$0 rule evaluation overhead** |
-| **File Uploads (Student Certificates/ID)** | Unrestricted file uploads filling Cloud Storage buckets. | **Client-side WebP/Canvas Compression:** Images & photos compressed to $<150$KB before upload. Strict bucket lifecycle rules. | Keeps storage well inside the **5 GB free limit** |
-| **Application Evaluation** | Running heavy Cloud Functions on every applicant submit ($0.40/million + CPU time). | **Client-Side Pre-Evaluation + Strict Security Rules Validation:** Form evaluates applicant rules instantly in-browser; Firestore security rules enforce eligibility constraints on document write. | **$0 Cloud Function compute costs** |
-
----
-
-### 3. Multi-Tenant Role-Based Access Control (RBAC)
+To achieve the **absolute lowest cost** and **highest scalability**, we do not choose just one database or storage service. Instead, we strategically route every data type to the service where it is cheapest and most effective:
 
 ```mermaid
 flowchart TD
-    SA["👑 Super Admin (You)"] -->|Approves & Manages| SCH["🏫 Schools (Tenants)"]
-    SCH --> PA["🏛️ Principal / School Admin"]
-    PA --> REG["📋 Registrar / Admissions Officer"]
-    PA --> TCH["👨‍🏫 Teachers"]
-    PA --> STU["🎓 Learners / Students"]
-    
-    REG -->|Reviews & Validates| APPS["📝 Online Applications"]
-    TCH -->|Uploads Homework & Grades| SUBJ["📚 Assigned Subjects Only"]
-    STU -->|Views Content, Submits Homework, Views Results| PORTAL["💻 Student Portal"]
+    subgraph ClientLayer["💻 Client Application (React 19 + TypeScript)"]
+        UI["Unified School Portal"]
+        AC["Firebase App Check (reCAPTCHA Enterprise)"]
+        AUTH["Firebase Auth (Custom Claims)"]
+    end
+
+    subgraph StorageLayer["📦 Tiered Object Storage Strategy"]
+        FS_STOR["🔥 Firebase Storage<br/>• User Profile Avatars<br/>• School Crests & Logos<br/>• Authorized Signatures & Stamps<br/>(Low frequency, small size, fast client-rule auth)"]
+        CF_R2["☁️ Cloudflare R2<br/>• Scanned Applicant Docs (Birth Certs, IDs)<br/>• Homework Attachments & Student Submissions<br/>• High-Res Teacher Slides & Notes<br/>($0 Egress Bandwidth Fees FOREVER!)"]
+    end
+
+    subgraph DatabaseLayer["🗄️ Tiered Multi-Database Strategy"]
+        RTDB["🔥 Firebase Realtime Database (RTDB)<br/>• Live Presence (Online Status)<br/>• Realtime Notification Badges<br/>• Admissions Queue Status Counter<br/>(WebSocket stream, NO per-read/write fee!)"]
+        CF_D1["☁️ Cloudflare D1 (Edge SQL)<br/>• Heavy Gradebooks & Assessment Marks<br/>• Historical Academic Records<br/>• Relational Classes, Terms & Rosters<br/>(5,000,000 Free Reads/Day!)"]
+        FIRESTORE["🔥 Cloud Firestore (IndexedDB Cached)<br/>• School Tenant Config & Letterhead Templates<br/>• Admission Rules & Cut-off Criteria<br/>(Aggressive offline caching = near-0 billable reads)"]
+    end
+
+    UI -->|Attestation Token| AC
+    UI -->|JWT + Role Claims| AUTH
+    UI -->|Direct SDK (Small/Cached)| FS_STOR
+    UI -->|Presigned URLs (Heavy/Large)| CF_R2
+    UI -->|WebSocket Subscriptions| RTDB
+    UI -->|API Gateway (App Check Validated)| CF_D1
+    UI -->|Cached Documents| FIRESTORE
 ```
 
-#### Granular Privileges Matrix
+#### Detailed Service Routing Criteria
 
-| Capability | Super Admin | School Admin | Registrar | Teacher | Learner |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| Create / Suspend Schools | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Configure School Letterhead & Logo | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Manage Terms, Subjects & Classes | ❌ | ✅ | ❌ | ❌ | ❌ |
-| Assign Teachers to Subjects | ❌ | ✅ | ❌ | ❌ | ❌ |
-| Configure Application Rules & Cutoffs | ❌ | ✅ | ✅ | ❌ | ❌ |
-| Review & Validate Learner Applications | ❌ | ✅ | ✅ | ❌ | ❌ |
-| Issue Acceptance / Status Letters | ❌ | ✅ | ✅ | ❌ | ❌ |
-| Enrol Accepted Learners into Classes | ❌ | ✅ | ✅ | ❌ | ❌ |
-| Upload Content & Homework | ❌ | ❌ | ❌ | ✅ *(Assigned only)* | ❌ |
-| Enter Subject Marks / Assessments | ❌ | ❌ | ❌ | ✅ *(Assigned only)* | ❌ |
-| Finalize & Publish Term Reports | ❌ | ✅ | ❌ | ❌ | ❌ |
-| View Subject Content & Homework | ❌ | ❌ | ❌ | ✅ | ✅ *(Enrolled only)* |
-| View & Download Report Cards / Letters | ❌ | ❌ | ❌ | ❌ | ✅ *(Own only)* |
+| Feature / Data Asset | Assigned Service | Specific Architectural & Cost Rationale |
+| :--- | :--- | :--- |
+| **Profile Photos & Avatars** | **Firebase Storage** | Small files ($<100$KB), low download frequency, direct client-side SDK integration with Firebase Auth security rules. |
+| **School Crests, Logos & Stamps** | **Firebase Storage** | Static assets cached heavily by CDN; quick setup with no presigned URL overhead. |
+| **Applicant Birth Certs, IDs, Prior Reports** | **Cloudflare R2** | Heavy documents, high volume. Using Firebase would risk the 1GB/day bandwidth limit; **R2 has $0 egress fees**. |
+| **Homework Files & Student Submissions** | **Cloudflare R2** | Hundreds of learners downloading teacher PDFs and submitting assignments daily. **$0 egress fees** saves massive bandwidth bills. |
+| **Live Presence & Notification Badges** | **Firebase Realtime Database (RTDB)** | Persistent WebSocket connection without per-read or per-write billing. Perfect for real-time counters. |
+| **School Config, Letterhead & Admission Rules** | **Cloud Firestore** | Document structures with `persistentLocalCache` (IndexedDB). Read once and cached locally forever. |
+| **Gradebooks, Term Marks, Roster Queries** | **Cloudflare D1 (SQL)** | Query-heavy relational data. **5,000,000 free reads/day** (vs Firestore's 50k limit) handles thousands of students querying marks. |
 
 ---
 
-### 4. End-to-End Admissions & Letterhead Workflow
+### 2. Granular Privileges Matrix (Preserved & Expanded)
+
+This matrix defines the exact capabilities enforced across the system via **Firebase Auth Custom Claims**, **Security Rules**, and **Edge API Guards**:
+
+| Capability / Action | Super Admin (You) | School Admin / Principal | Registrar / Admissions | Teacher | Learner / Student |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Multi-Tenancy & School Setup** | | | | | |
+| Create, activate, or suspend schools | ✅ | ❌ | ❌ | ❌ | ❌ |
+| View platform-wide metrics & tenants | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Configure school profile & branding | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Upload school crest, stamp & signature | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Create & manage academic years & terms | ❌ | ✅ | ❌ | ❌ | ❌ |
+| Create classes, grades, and subjects | ❌ | ✅ | ❌ | ❌ | ❌ |
+| **User & Staff Management** | | | | | |
+| Provision School Admin accounts | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Provision Registrar & Teacher accounts | ❌ | ✅ | ❌ | ❌ | ❌ |
+| Assign teachers to specific subjects/classes | ❌ | ✅ | ❌ | ❌ | ❌ |
+| Deactivate/archive staff members | ❌ | ✅ | ❌ | ❌ | ❌ |
+| **Admissions & Online Applications** | | | | | |
+| Configure automated screening criteria | ❌ | ✅ | ✅ | ❌ | ❌ |
+| Submit public online application | ❌ | ❌ | ❌ | ❌ | ✅ *(Applicant)* |
+| View automated application evaluation score | ❌ | ✅ | ✅ | ❌ | ✅ *(Own score)* |
+| Inspect applicant documents & certificates | ❌ | ✅ | ✅ | ❌ | ❌ |
+| Validate / Approve / Reject application | ❌ | ✅ | ✅ | ❌ | ❌ |
+| Enrol accepted applicant into class roster | ❌ | ✅ | ✅ | ❌ | ❌ |
+| Issue branded acknowledgement letter | ❌ | ✅ | ✅ | ❌ | ✅ *(Download own)* |
+| Issue official branded acceptance letter | ❌ | ✅ | ✅ | ❌ | ✅ *(Download own)* |
+| **Academics, Learning & Homework** | | | | | |
+| View all school subjects & curricula | ❌ | ✅ | ❌ | ❌ | ❌ |
+| View assigned subjects & contents | ❌ | ✅ | ❌ | ✅ *(Assigned only)* | ✅ *(Enrolled only)* |
+| Upload subject learning materials & notes | ❌ | ❌ | ❌ | ✅ *(Assigned only)* | ❌ |
+| Create & distribute homework/assignments | ❌ | ❌ | ❌ | ✅ *(Assigned only)* | ❌ |
+| Submit homework solutions/attachments | ❌ | ❌ | ❌ | ❌ | ✅ *(Enrolled only)* |
+| Grade homework & provide feedback | ❌ | ❌ | ❌ | ✅ *(Assigned only)* | ❌ |
+| **Assessments, Marks & Term Reports** | | | | | |
+| Enter test/exam marks for assigned subject | ❌ | ❌ | ❌ | ✅ *(Assigned only)* | ❌ |
+| Lock & submit subject marks to registrar | ❌ | ❌ | ❌ | ✅ *(Assigned only)* | ❌ |
+| Aggregate and preview term report cards | ❌ | ✅ | ✅ | ❌ | ❌ |
+| Sign and publish official term report cards | ❌ | ✅ | ❌ | ❌ | ❌ |
+| View and download branded term report card | ❌ | ✅ | ❌ | ❌ | ✅ *(Own only)* |
+
+---
+
+### 3. End-to-End Admissions Pipeline with Dynamic School Letterhead
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Learner as 🎓 Applicant
-    participant App as 🌐 Portal (Client)
-    participant FS as 🗄️ Firestore
+    participant Portal as 🌐 Public Portal (Client)
+    participant R2 as ☁️ Cloudflare R2
+    participant Edge as 🛡️ Edge API (App Check)
     actor Registrar as 📋 Registrar
     
-    Learner->>App: Submits Application (Grades, Info, Documents)
-    Note over App: Step 1: Automated Rule Evaluation<br/>(Calculates Eligibility Score & Criteria Pass/Fail)
-    App->>FS: Saves Application with Status: 'auto_screened_passed' / 'auto_flagged'
-    App-->>Learner: Displays Instant Branded Acknowledgement Letter (Print/PDF)
+    Learner->>Portal: Fills Application (Bio, Previous Marks, Intended Grade)
+    Portal->>Edge: Requests Presigned R2 Upload URL for Birth Cert & Prev Report
+    Edge-->>Portal: Issues short-lived presigned URL (after App Check verification)
+    Portal->>R2: Uploads compressed WebP documents directly
+    Note over Portal: Automated Rule Evaluation Engine<br/>• Checks Age Limits<br/>• Computes Qualifying Average<br/>• Validates Document Completeness
+    Portal->>Edge: Submits Application Payload + Auto-Evaluation Result
+    Edge-->>Portal: Confirms Submission & Issues Application Ref ID
+    Portal-->>Learner: Renders Instant Branded Acknowledgement Letter (Print/PDF)
     
-    Registrar->>FS: Reads Applications Queue
-    Registrar->>Registrar: Inspects Documents & Automated Score
-    alt Validated
-        Registrar->>FS: Updates Status: 'accepted' & generates Student Record
-        FS-->>Learner: Learner Portal reflects 'Accepted'
-        Learner->>App: Downloads Official Acceptance Letter with School Letterhead
-    else Clarification Needed / Rejected
-        Registrar->>FS: Updates Status: 'documents_requested' or 'rejected'
-        Learner->>App: Downloads Status Notice / Reason Letter
+    Registrar->>Edge: Fetches Admissions Queue
+    Registrar->>Registrar: Reviews applicant profile, test scores & documents
+    alt Approved
+        Registrar->>Edge: Sets status to 'Accepted' & creates Student Profile
+        Learner->>Portal: Enters Reference Number to view acceptance status
+        Portal-->>Learner: Renders Official School Letterhead Acceptance Letter (Print/PDF)
+    else Additional Docs Required / Rejected
+        Registrar->>Edge: Updates status to 'Docs Requested' or 'Rejected'
+        Portal-->>Learner: Renders Official Notice Letter with specific reason
     end
 ```
 
-#### The Dynamic School Letterhead Engine
-Every school configures their official letterhead once in their School Settings:
-- **School Crest / Logo** (URL or compressed image)
-- **School Name, Registration / EMIS Number, Motto**
-- **Physical Address, Telephone, Email, Website**
-- **Digital Stamp & Authorized Signature** (Principal or Registrar)
-
-Whenever an applicant reaches a milestone (Application Received, Conditional Passed, Accepted, Enrolled):
-- The client injects the applicant's name, reference number, date, and decision text into the school's letterhead template.
-- Can be printed or saved as an authentic PDF with zero server costs using client-side rendering (`window.print` with high-fidelity print CSS or `jspdf`).
-
----
-
-### 5. Data Model Design (Firestore)
-
-To isolate tenants and enforce strict security rules with zero extra reads:
-
-```
-/schools/{schoolId}
-  ├── profile: { name, code, address, email, phone, logoUrl, stampUrl, signatureUrl, termsAndConditions }
-  ├── admissionSettings: { minAge, maxAge, passScoreThreshold, openGrades: [...], requiredDocs: [...] }
-  │
-  ├── /academicYears/{yearId}
-  │     └── terms: [{ termId, name, startDate, endDate, isCurrent }]
-  │
-  ├── /classes/{classId}
-  │     └── { name: "Grade 10A", gradeLevel: 10, classTeacherId }
-  │
-  ├── /subjects/{subjectId}
-  │     └── { name: "Mathematics", code: "MTH10", gradeLevel: 10, teacherIds: [...] }
-  │
-  ├── /courseContent/{contentId}
-  │     └── { subjectId, title, description, attachments: [...], uploadedBy, createdAt }
-  │
-  ├── /homework/{homeworkId}
-  │     └── { subjectId, classId, title, instructions, dueDate, teacherId, maxMarks }
-  │
-  ├── /applications/{applicationId}
-  │     └── { applicantName, email, phone, gradeApplied, prevMarks, autoEvalResult: { passed, score, notes }, status: "pending" | "auto_passed" | "accepted" | "rejected", documents: [...] }
-  │
-  ├── /students/{studentId}
-  │     └── { uid, admissionNo, fullName, classId, enrolledSubjects: [...], status: "active" }
-  │
-  └── /reportCards/{reportId} (Document ID: studentId_yearId_termId)
-        └── { studentId, termId, yearId, subjects: [{ subjectName, mark, maxMark, grade, teacherRemark }], totalScore, average, principalRemark, status: "draft" | "published" }
-```
+#### The Zero-Storage Cost Official Letterhead Engine
+- **Letterhead Assets:** School Crest, Registered EMIS Number, School Physical Address, Principal Signature, and School Digital Stamp stored once in Firebase Storage and cached on CDN.
+- **Dynamic Letter Template:** Vector HTML/CSS print template rendering:
+  * Official School Crest & Header
+  * Reference Code (`ADM-2026-[ID]`) & Date
+  * Addressee (Learner Name, Parent/Guardian, Address)
+  * Formal Decision Text with Criteria Checklist
+  * Official Stamp & Authorized Signature
+- **PDF & Print Export:** Generated client-side via browser print styling and vector PDF renderer. **Storage cost = \$0.00**.
 
 ---
 
-### 6. Implementation Roadmap
+### 4. Zero-Trust Security Architecture & App Check
 
-1. **Phase 1: Project Setup & Firebase Architecture Foundations**
-   - Configure Firebase Client SDK with offline cache enabled (`initializeFirestore(app, { localCache: persistentLocalCache() })`).
-   - Setup TailwindCSS styling with a responsive, modern dashboard layout.
-   - Configure State Management & Firebase Auth Context with custom claims / tenant context.
+1. **Firebase App Check Attestation:**
+   - Client initializes App Check with `reCAPTCHA Enterprise`.
+   - Every API call to Cloudflare Workers or Firebase services carries the `X-Firebase-AppCheck` token.
+   - Workers verify the token against Google's public JWKS. Unverified requests, curl scripts, or scrapers are rejected with **HTTP 403 Forbidden**.
+2. **Tenant Isolation:**
+   - Every user's Firebase Auth JWT contains custom claims: `{ "schoolId": "sch_123", "role": "teacher", "subjects": ["sub_math"] }`.
+   - All D1 SQL queries append `WHERE school_id = ?` based on the cryptographically signed JWT claim. Cross-tenant access is impossible.
+3. **Teacher Subject Isolation:**
+   - When a teacher inserts marks or uploads homework, the backend verifies `subject_id IN (claims.subjects)`.
+4. **Student Privacy:**
+   - Students can only query marks, submissions, and report cards matching their own `student_id = claims.uid`.
 
-2. **Phase 2: Super-Admin & School Onboarding (Multi-Tenancy)**
-   - Super Admin dashboard to view all registered schools, activate/suspend schools.
-   - School registration flow & Principal account creation.
-   - School Admin dashboard to customize school details, branding, logo, stamp, and letterhead layout.
+---
 
-3. **Phase 3: Public Application Portal & Automated Evaluation Engine**
-   - Public multi-step application form with school selector or tenant domain/subpath.
-   - Client-side document uploader with automatic WebP image compression.
-   - Automated evaluation rules engine: validates age, calculates entrance percentage, checks required documents.
-   - Dynamic Branded Letterhead generator for Application Acknowledgement.
+### 5. Phased Implementation Roadmap
 
-4. **Phase 4: Registrar Admissions Dashboard & Letter Generation**
-   - Admissions review queue (filterable by auto-passed, pending, flagged).
-   - Registrar verification modal: document preview, approval/rejection notes.
-   - One-click issuance of official School Letterhead Acceptance / Rejection Letters.
-   - One-click student account creation and class placement.
-
-5. **Phase 5: Academic Modules & Teacher Portal**
-   - Subject & Class management (School Admin assigns teachers to specific subjects).
-   - Teacher Dashboard restricted *strictly* to their assigned subjects.
-   - Subject Content & Homework creation and distribution.
-
-6. **Phase 6: Marks, Assessments & Term Reports**
-   - Teacher marks entry grid for their assigned subjects.
-   - Automated aggregation into single term report documents.
-   - Principal review & publishing.
-   - Learner Portal: view homework, learning materials, results, and print/download official term reports with letterhead.
-
-7. **Phase 7: Security Rules & Cost Verification**
-   - Production-ready `firestore.rules` and `storage.rules` ensuring cross-tenant isolation and role enforcement.
-   - Free-tier cost verification test.
+- **Phase 1: Foundation & Security Setup**
+  * Modern UI framework with Tailwind CSS & Lucide Icons.
+  * Firebase App Check & Auth service layer with custom claims context.
+  * Tiered storage and database adapters (Firebase Storage, Cloudflare R2, Firestore, D1, RTDB).
+- **Phase 2: Multi-Tenant Super Admin & School Branding Console**
+  * Super Admin panel: Global school onboarding, activation, tenant limits.
+  * School Admin portal: School branding customizer (crest, colors, address, digital stamp, signature).
+- **Phase 3: Public Admissions Portal & Automated Rule Screening**
+  * Multi-step public application form with school selector.
+  * Client-side WebP image compressor + R2 document upload.
+  * Automated screening engine with criteria scoring.
+  * Instant Branded Acknowledgement Letter viewer & print exporter.
+- **Phase 4: Registrar Admissions Console & Acceptance Letter Engine**
+  * Admissions queue filterable by status (`auto_passed`, `flagged`, `accepted`, `rejected`).
+  * Document verification modal with approval/rejection workflows.
+  * One-click Acceptance Letter generation and class enrolment.
+- **Phase 5: Academic & Teacher Portal (Subject-Scoped)**
+  * Class and Subject assignment engine.
+  * Teacher Portal restricted strictly to assigned classes and subjects.
+  * Homework & curriculum module management with Cloudflare R2 attachments.
+- **Phase 6: Marks, Assessments & Term Report Cards**
+  * Subject marks entry grid for teachers.
+  * Automated term report card aggregation with letterhead, attendance, teacher remarks, and principal sign-off.
+  * Student Portal: homework viewer, mark tracking, and official term report card downloader.
