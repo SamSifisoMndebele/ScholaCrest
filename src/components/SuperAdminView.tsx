@@ -10,13 +10,17 @@ import {
   HardDrive,
   Search,
   Sparkles,
-  Radio
+  Radio,
+  Trash2,
+  RotateCcw
 } from 'lucide-react';
 
 interface SuperAdminViewProps {
   schools: School[];
   onAddSchool: (school: School) => void;
   onToggleStatus: (schoolId: string) => void;
+  onDeleteSchool: (schoolId: string) => void;
+  onSeedDatabase: () => void;
   onSelectSchoolForInspection: (school: School) => void;
   onNotify?: (title: string, message: string, type?: 'success' | 'info' | 'warning') => void;
 }
@@ -25,6 +29,8 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
   schools,
   onAddSchool,
   onToggleStatus,
+  onDeleteSchool,
+  onSeedDatabase,
   onSelectSchoolForInspection,
   onNotify,
 }) => {
@@ -53,6 +59,15 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
     if (statusFilter === 'suspended') return s.status === 'suspended';
     return true;
   });
+
+  const handleDelete = (schoolId: string, schoolName: string) => {
+    if (window.confirm(`Are you sure you want to permanently delete "${schoolName}" from the real database? This action cannot be undone.`)) {
+      onDeleteSchool(schoolId);
+      if (onNotify) {
+        onNotify('School Tenant Deleted', `"${schoolName}" was removed permanently from Cloudflare D1.`, 'warning');
+      }
+    }
+  };
 
   const handleCreateSchool = (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,13 +152,23 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
               </p>
             </div>
 
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="flex items-center space-x-2 bg-crest-gold hover:bg-crest-goldLight text-crest-navyDark px-5 py-3 rounded-2xl text-xs md:text-sm font-bold transition-all shadow-lg hover:shadow-glow-gold hover:scale-[1.02]"
-            >
-              <PlusCircle className="w-4 h-4" />
-              <span>Register New School</span>
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={onSeedDatabase}
+                className="flex items-center space-x-2 bg-white/10 hover:bg-white/20 text-white border border-white/20 px-4 py-3 rounded-2xl text-xs md:text-sm font-bold transition-all"
+                title="Seed or reset standard demo schools in real D1 database"
+              >
+                <RotateCcw className="w-4 h-4 text-crest-gold" />
+                <span>Seed Starter Data</span>
+              </button>
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="flex items-center space-x-2 bg-crest-gold hover:bg-crest-goldLight text-crest-navyDark px-5 py-3 rounded-2xl text-xs md:text-sm font-bold transition-all shadow-lg hover:shadow-glow-gold hover:scale-[1.02]"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>Register New School</span>
+              </button>
+            </div>
           </div>
 
           {/* Infrastructure & Security Health Cards */}
@@ -308,6 +333,14 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
                       }`}
                     >
                       {school.status === 'active' ? 'Suspend' : 'Activate'}
+                    </button>
+                    <button
+                      onClick={() => handleDelete(school.id, school.name)}
+                      className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl font-bold text-xs transition-colors inline-flex items-center gap-1"
+                      title="Permanently delete school from database"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete</span>
                     </button>
                   </td>
                 </tr>

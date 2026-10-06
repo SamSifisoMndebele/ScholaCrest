@@ -29,21 +29,17 @@ export const ApplicantView: React.FC<ApplicantViewProps> = ({
   onOpenLetter,
   onNotify,
 }) => {
-  const [applicantName, setApplicantName] = useState('Sophia Chen');
-  const [parentName, setParentName] = useState('Michael Chen');
-  const [email, setEmail] = useState('chen.family@gmail.com');
-  const [phone, setPhone] = useState('+27 82 459 1102');
-  const [dob, setDob] = useState('2010-04-18');
-  const [gradeApplied, setGradeApplied] = useState(10);
-  const [previousSchool, setPreviousSchool] = useState('Pinelands Preparatory');
-  const [previousAverageMarks, setPreviousAverageMarks] = useState(78.4);
+  const [applicantName, setApplicantName] = useState('');
+  const [parentName, setParentName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [dob, setDob] = useState('');
+  const [gradeApplied, setGradeApplied] = useState<number>(school.admissionRules?.openGrades?.[0] || 10);
+  const [previousSchool, setPreviousSchool] = useState('');
+  const [previousAverageMarks, setPreviousAverageMarks] = useState<number>(75);
   
-  // Document state with realistic initial files
-  const [documents, setDocuments] = useState<ApplicantDocument[]>([
-    { type: 'birth_cert', fileName: 'sophia_birth_cert.webp', fileSize: 112, storage: 'r2' },
-    { type: 'prev_report', fileName: 'term4_report_card.webp', fileSize: 145, storage: 'r2' },
-    { type: 'id_doc', fileName: 'parent_id_verified.webp', fileSize: 98, storage: 'r2' },
-  ]);
+  // Document state initialized empty for real applicant uploads
+  const [documents, setDocuments] = useState<ApplicantDocument[]>([]);
 
   const [submittedApp, setSubmittedApp] = useState<OnlineApplication | null>(null);
   const [isCompressing, setIsCompressing] = useState(false);
