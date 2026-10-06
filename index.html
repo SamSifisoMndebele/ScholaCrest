@@ -2,15 +2,63 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/scholacrest-icon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- Primary SEO Meta Tags -->
     <title>ScholaCrest | Multi-Tenant School Management Platform</title>
-    <meta name="description" content="ScholaCrest - The ultra-low-cost, multi-tenant school management system with automated admissions, official letterhead engine, and academic term reporting." />
-    <!-- Fonts -->
+    <meta name="title" content="ScholaCrest | Multi-Tenant School Management Platform" />
+    <meta name="description" content="ScholaCrest is an enterprise multi-tenant school management SaaS with automated admissions, dynamic official letterhead generation, zero-egress Cloudflare R2 storage, and D1 relational gradebooks." />
+    <meta name="keywords" content="ScholaCrest, school management system, multi-tenant SMS, student admissions, online school application, report card generator, official letterhead software, education SaaS, Cloudflare D1, Cloudflare R2, Firebase App Check" />
+    <meta name="robots" content="index, follow" />
+    <meta name="author" content="ScholaCrest Technologies" />
+    <meta name="theme-color" content="#092451" />
+    <link rel="canonical" href="https://scholacrest.com" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://scholacrest.com/" />
+    <meta property="og:site_name" content="ScholaCrest" />
+    <meta property="og:title" content="ScholaCrest | Multi-Tenant School Management Platform" />
+    <meta property="og:description" content="Empowering schools with automated admissions pre-screening, dynamic official letterheads, subject-scoped teacher gradebooks, and low-cost serverless edge architecture." />
+    <meta property="og:image" content="https://scholacrest.com/logo-horizontal.svg" />
+
+    <!-- Twitter / X -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://scholacrest.com/" />
+    <meta property="twitter:title" content="ScholaCrest | Multi-Tenant School Management Platform" />
+    <meta property="twitter:description" content="Empowering schools with automated admissions pre-screening, dynamic official letterheads, subject-scoped teacher gradebooks, and low-cost serverless edge architecture." />
+    <meta property="twitter:image" content="https://scholacrest.com/logo-horizontal.svg" />
+
+    <!-- Favicon & Icons -->
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="alternate icon" type="image/png" href="/scholacrest-logo.png" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
+
+    <!-- Fonts: Plus Jakarta Sans for UI + Cinzel for Official Institutional Letterheads -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Cinzel:wght@600;700&display=swap" rel="stylesheet">
-    <!-- Tailwind CSS CDN -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Cinzel:wght@600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- JSON-LD Structured Data for Educational Software Application -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "ScholaCrest",
+      "applicationCategory": "EducationalApplication",
+      "operatingSystem": "Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "description": "Multi-tenant cloud School Management System featuring automated admissions evaluation, dynamic official letterheads, gradebooks, and term reports.",
+      "url": "https://scholacrest.com",
+      "image": "https://scholacrest.com/logo-horizontal.svg"
+    }
+    </script>
+
+    <!-- Tailwind CSS CDN with Custom ScholaCrest Theme -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -22,6 +70,13 @@
               serif: ['Cinzel', 'Georgia', 'serif'],
             },
             colors: {
+              crest: {
+                navy: '#092451',
+                navyDark: '#051633',
+                gold: '#c27f1a',
+                goldLight: '#e69f35',
+                goldDark: '#996312',
+              },
               brand: {
                 50: '#eff6ff',
                 100: '#dbeafe',
@@ -29,18 +84,31 @@
                 600: '#2563eb',
                 700: '#1d4ed8',
                 800: '#1e40af',
-                900: '#1e3a8a',
+                900: '#092451',
               }
+            },
+            boxShadow: {
+              'glow-gold': '0 0 20px -3px rgba(194, 127, 26, 0.35)',
+              'glow-navy': '0 0 25px -5px rgba(9, 36, 81, 0.4)',
+              'sheet': '0 20px 50px -10px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05)',
             }
           }
         }
       }
     </script>
     <style>
+      /* Smooth transitions */
+      * {
+        scroll-behavior: smooth;
+      }
+      
+      /* Print Styling for Official Letterhead & Reports */
       @media print {
         body {
           background: white !important;
           color: black !important;
+          margin: 0 !important;
+          padding: 0 !important;
         }
         .no-print {
           display: none !important;
@@ -53,12 +121,13 @@
           border: none !important;
           margin: 0 !important;
           width: 100% !important;
+          max-width: 100% !important;
           padding: 0 !important;
         }
       }
     </style>
   </head>
-  <body class="bg-slate-50 text-slate-900 antialiased font-sans selection:bg-blue-600 selection:text-white">
+  <body class="bg-slate-50 text-slate-900 antialiased font-sans selection:bg-[#c27f1a] selection:text-white">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

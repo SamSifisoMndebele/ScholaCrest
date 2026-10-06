@@ -27,15 +27,22 @@ import { TeacherView } from './components/TeacherView';
 import { StudentView } from './components/StudentView';
 import { ApplicantView } from './components/ApplicantView';
 import { ScholaCrestLogo } from './components/ScholaCrestLogo';
-import type { LogoVariant } from './components/ScholaCrestLogo';
 import { 
   ShieldCheck, 
   Building2, 
   Database, 
   HardDrive, 
   Radio,
-  Palette
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
+
+interface ToastMessage {
+  id: string;
+  title: string;
+  message: string;
+  type: 'success' | 'info' | 'warning';
+}
 
 export function App() {
   // Global Multi-Tenant State
@@ -60,9 +67,6 @@ export function App() {
   // Active Role Simulation (Super Admin, Principal, Registrar, Teacher, Student, Applicant)
   const [currentRole, setCurrentRole] = useState<UserRole | 'applicant'>('super_admin');
 
-  // Vector SVG Logo Variant Switcher ('text-right' | 'icon-only' | 'icon-badge' | 'vertical')
-  const [logoVariant, setLogoVariant] = useState<LogoVariant>('text-right');
-
   // Multi-Tenant Data Stores
   const [applications, setApplications] = useState<OnlineApplication[]>(INITIAL_APPLICATIONS);
   const [homework, setHomework] = useState<HomeworkAssignment[]>(INITIAL_HOMEWORK);
@@ -80,15 +84,32 @@ export function App() {
   const teacherUser = INITIAL_USERS.find(u => u.uid === 'usr_teacher_elena')!;
   const studentUser = INITIAL_USERS.find(u => u.uid === 'usr_student_ethan')!;
 
+  // Toast Notification System
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const showToast = (title: string, message: string, type: 'success' | 'info' | 'warning' = 'success') => {
+    const id = `t_${Date.now()}_${Math.random()}`;
+    setToasts(prev => [...prev, { id, title, message, type }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 4500);
+  };
+
+  const dismissToast = (id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  };
+
   // Handlers
   const handleAddSchool = (newSchool: School) => {
     setSchools(prev => [...prev, newSchool]);
+    showToast('New Institution Registered', `${newSchool.name} (${newSchool.code}) onboarded successfully.`, 'success');
   };
 
   const handleToggleSchoolStatus = (schoolId: string) => {
     setSchools(prev => prev.map(s => {
       if (s.id === schoolId) {
-        return { ...s, status: s.status === 'active' ? 'suspended' : 'active' };
+        const nextStatus = s.status === 'active' ? 'suspended' : 'active';
+        return { ...s, status: nextStatus };
       }
       return s;
     }));
@@ -154,58 +175,34 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-50/60 text-slate-800 flex flex-col font-sans">
       {/* Top Navigation & Role Simulator Header */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 gap-4">
             {/* Logo & School Tenant Picker */}
-            <div className="flex items-center space-x-4">
-              {logoVariant === 'text-right' ? (
-                <div className="flex items-center space-x-3">
-                  <ScholaCrestLogo size={42} variant="text-right" />
-                  <div className="h-8 w-px bg-slate-200 hidden sm:block" />
-                  {/* School Tenant Dropdown */}
-                  <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200">
-                    <Building2 className="w-3.5 h-3.5 text-blue-700" />
-                    <select
-                      value={activeSchoolId}
-                      onChange={(e) => setActiveSchoolId(e.target.value)}
-                      className="font-bold text-slate-800 bg-transparent border-none focus:outline-none cursor-pointer pr-2 text-xs"
-                    >
-                      {schools.map(s => (
-                        <option key={s.id} value={s.id}>
-                          {s.name} ({s.code})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+            <div className="flex items-center space-x-3">
+              <ScholaCrestLogo size={42} variant="icon-only" />
+              <div>
+                <div className="font-extrabold text-base tracking-tight text-crest-navy flex items-center gap-1.5 font-sans leading-none">
+                  SCHOLACREST <span className="text-[10px] bg-blue-100 text-crest-navy px-1.5 py-0.5 rounded font-sans font-semibold">SaaS</span>
                 </div>
-              ) : (
-                <div className="flex items-center space-x-3">
-                  <ScholaCrestLogo size={42} variant={logoVariant} />
-                  <div>
-                    <div className="font-extrabold text-base tracking-tight text-blue-950 flex items-center gap-1.5 font-sans">
-                      SCHOLACREST <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-sans font-semibold">SaaS</span>
-                    </div>
-                    {/* School Tenant Dropdown */}
-                    <div className="flex items-center gap-1 text-xs text-slate-500">
-                      <Building2 className="w-3 h-3 text-blue-700" />
-                      <select
-                        value={activeSchoolId}
-                        onChange={(e) => setActiveSchoolId(e.target.value)}
-                        className="font-semibold text-slate-800 bg-transparent border-none focus:outline-none cursor-pointer pr-4 text-xs"
-                      >
-                        {schools.map(s => (
-                          <option key={s.id} value={s.id}>
-                            {s.name} ({s.code})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
+                {/* School Tenant Dropdown */}
+                <div className="flex items-center gap-1 text-xs text-slate-500 mt-1">
+                  <Building2 className="w-3.5 h-3.5 text-crest-navy flex-shrink-0" />
+                  <select
+                    value={activeSchoolId}
+                    onChange={(e) => setActiveSchoolId(e.target.value)}
+                    className="font-semibold text-slate-800 bg-transparent border-none focus:outline-none cursor-pointer pr-3 text-xs truncate max-w-[240px]"
+                  >
+                    {schools.map(s => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({s.code})
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              )}
+              </div>
             </div>
 
             {/* Architecture & Zero-Cost Status Badges */}
@@ -219,7 +216,7 @@ export function App() {
                 R2: $0 Egress
               </span>
               <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-50 text-blue-800 border border-blue-200 font-bold">
-                <Database className="w-3.5 h-3.5 text-blue-600" />
+                <Database className="w-3.5 h-3.5 text-crest-navy" />
                 D1: 5M Reads
               </span>
               <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-bold">
@@ -228,40 +225,14 @@ export function App() {
               </span>
             </div>
 
-            {/* Logo Style Switcher (Interactive Preview of all SVG variants) */}
-            <div className="hidden xl:flex items-center bg-slate-100 p-1 rounded-xl text-xs font-semibold text-slate-700">
-              <Palette className="w-3.5 h-3.5 ml-1.5 mr-1 text-amber-600" />
-              <button
-                onClick={() => setLogoVariant('text-right')}
-                className={`px-2 py-0.5 rounded-lg text-[11px] transition-colors ${logoVariant === 'text-right' ? 'bg-white text-blue-950 font-bold shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
-                title="Logo on Left with Text on Right"
-              >
-                Text on Right
-              </button>
-              <button
-                onClick={() => setLogoVariant('icon-only')}
-                className={`px-2 py-0.5 rounded-lg text-[11px] transition-colors ${logoVariant === 'icon-only' ? 'bg-white text-blue-950 font-bold shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
-                title="Pure Vector Shield Emblem Only"
-              >
-                Logo Only
-              </button>
-              <button
-                onClick={() => setLogoVariant('icon-badge')}
-                className={`px-2 py-0.5 rounded-lg text-[11px] transition-colors ${logoVariant === 'icon-badge' ? 'bg-white text-blue-950 font-bold shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
-                title="Emblem on Squircle App Badge Container"
-              >
-                App Badge
-              </button>
-            </div>
-
             {/* Role Switcher (Simulates login across all user privileges) */}
             <div className="flex items-center space-x-2">
               <span className="text-[11px] font-bold text-slate-400 uppercase hidden sm:inline">Role View:</span>
-              <div className="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-bold">
+              <div className="flex items-center bg-slate-100 p-1 rounded-2xl text-xs font-bold">
                 <button
                   onClick={() => setCurrentRole('super_admin')}
-                  className={`px-2.5 py-1 rounded-lg transition-colors ${
-                    currentRole === 'super_admin' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                  className={`px-2.5 py-1.5 rounded-xl transition-all ${
+                    currentRole === 'super_admin' ? 'bg-crest-navy text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
                   }`}
                   title="Super Admin: System Owner controlling all schools"
                 >
@@ -269,8 +240,8 @@ export function App() {
                 </button>
                 <button
                   onClick={() => setCurrentRole('school_admin')}
-                  className={`px-2.5 py-1 rounded-lg transition-colors ${
-                    currentRole === 'school_admin' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                  className={`px-2.5 py-1.5 rounded-xl transition-all ${
+                    currentRole === 'school_admin' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
                   }`}
                   title="Principal: Configures school letterhead, branding, and subjects"
                 >
@@ -278,8 +249,8 @@ export function App() {
                 </button>
                 <button
                   onClick={() => setCurrentRole('registrar')}
-                  className={`px-2.5 py-1 rounded-lg transition-colors ${
-                    currentRole === 'registrar' ? 'bg-amber-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                  className={`px-2.5 py-1.5 rounded-xl transition-all ${
+                    currentRole === 'registrar' ? 'bg-amber-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
                   }`}
                   title="Registrar: Reviews applicant evaluations & issues acceptance letters"
                 >
@@ -287,8 +258,8 @@ export function App() {
                 </button>
                 <button
                   onClick={() => setCurrentRole('teacher')}
-                  className={`px-2.5 py-1 rounded-lg transition-colors ${
-                    currentRole === 'teacher' ? 'bg-purple-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                  className={`px-2.5 py-1.5 rounded-xl transition-all ${
+                    currentRole === 'teacher' ? 'bg-purple-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
                   }`}
                   title="Teacher: Scoped strictly to assigned subjects"
                 >
@@ -296,8 +267,8 @@ export function App() {
                 </button>
                 <button
                   onClick={() => setCurrentRole('student')}
-                  className={`px-2.5 py-1 rounded-lg transition-colors ${
-                    currentRole === 'student' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                  className={`px-2.5 py-1.5 rounded-xl transition-all ${
+                    currentRole === 'student' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
                   }`}
                   title="Student: Accesses homework and views official term reports"
                 >
@@ -305,8 +276,8 @@ export function App() {
                 </button>
                 <button
                   onClick={() => setCurrentRole('applicant')}
-                  className={`px-2.5 py-1 rounded-lg transition-colors ${
-                    currentRole === 'applicant' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                  className={`px-2.5 py-1.5 rounded-xl transition-all ${
+                    currentRole === 'applicant' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
                   }`}
                   title="Public Portal: Prospective applicants apply online"
                 >
@@ -328,7 +299,9 @@ export function App() {
             onSelectSchoolForInspection={(sch) => {
               setActiveSchoolId(sch.id);
               setCurrentRole('school_admin');
+              showToast('Switched to Tenant', `Now inspecting ${sch.name} as Principal.`, 'info');
             }}
+            onNotify={showToast}
           />
         )}
 
@@ -340,6 +313,7 @@ export function App() {
             onUpdateSchool={handleUpdateSchool}
             onPreviewLetterhead={() => setActiveLetterApp(applications[0])}
             onPreviewReportCard={() => setShowReportCardModal(true)}
+            onNotify={showToast}
           />
         )}
 
@@ -349,6 +323,7 @@ export function App() {
             applications={applications}
             onUpdateStatus={handleUpdateApplicationStatus}
             onOpenLetter={(app) => setActiveLetterApp(app)}
+            onNotify={showToast}
           />
         )}
 
@@ -361,6 +336,7 @@ export function App() {
             marks={marks}
             onAddHomework={handleAddHomework}
             onAddOrUpdateMark={handleAddOrUpdateMark}
+            onNotify={showToast}
           />
         )}
 
@@ -372,6 +348,7 @@ export function App() {
             homework={homework}
             reportCard={reportCard}
             onOpenReportCard={() => setShowReportCardModal(true)}
+            onNotify={showToast}
           />
         )}
 
@@ -380,6 +357,7 @@ export function App() {
             school={currentSchool}
             onSubmitApplication={handleSubmitApplication}
             onOpenLetter={(app) => setActiveLetterApp(app)}
+            onNotify={showToast}
           />
         )}
       </main>
@@ -402,16 +380,48 @@ export function App() {
         />
       )}
 
+      {/* Floating Toast Notification Container */}
+      <div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2.5 max-w-sm w-full pointer-events-none">
+        {toasts.map(toast => (
+          <div
+            key={toast.id}
+            className={`pointer-events-auto p-4 rounded-2xl shadow-2xl border text-xs flex items-start gap-3 backdrop-blur-md transition-all animate-in slide-in-from-bottom-5 duration-200 ${
+              toast.type === 'success' 
+                ? 'bg-slate-900/95 text-white border-emerald-500/40' 
+                : toast.type === 'warning'
+                ? 'bg-amber-950/95 text-white border-amber-500/40'
+                : 'bg-slate-900/95 text-white border-blue-500/40'
+            }`}
+          >
+            <div className="p-1 rounded-lg mt-0.5">
+              {toast.type === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+              {toast.type === 'warning' && <AlertCircle className="w-4 h-4 text-amber-400" />}
+              {toast.type === 'info' && <Radio className="w-4 h-4 text-blue-400" />}
+            </div>
+            <div className="flex-1">
+              <div className="font-bold text-slate-100">{toast.title}</div>
+              <div className="text-[11px] text-slate-300 mt-0.5 leading-snug">{toast.message}</div>
+            </div>
+            <button
+              onClick={() => dismissToast(toast.id)}
+              className="text-slate-400 hover:text-white font-bold ml-1 text-xs cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+      </div>
+
       {/* Footer */}
       <footer className="no-print bg-white border-t border-slate-200 py-6 text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center space-x-2">
-            <ScholaCrestLogo size={20} variant={logoVariant} />
+            <ScholaCrestLogo size={22} variant="icon-only" />
             <span className="font-bold text-slate-800">ScholaCrest Multi-Tenant SMS</span>
             <span>• Protected by Firebase App Check & Cloudflare Edge</span>
           </div>
           <div className="font-mono text-[11px] text-slate-400">
-            Domain: <strong className="text-blue-900">scholacrest.com</strong> • Tenant: {currentSchool.name} ({currentSchool.code})
+            Domain: <strong className="text-crest-navy">scholacrest.com</strong> • Active Tenant: {currentSchool.name} ({currentSchool.code})
           </div>
         </div>
       </footer>

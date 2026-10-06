@@ -8,7 +8,9 @@ import {
   XCircle, 
   Database, 
   HardDrive,
-  Search
+  Search,
+  Sparkles,
+  Radio
 } from 'lucide-react';
 
 interface SuperAdminViewProps {
@@ -16,6 +18,7 @@ interface SuperAdminViewProps {
   onAddSchool: (school: School) => void;
   onToggleStatus: (schoolId: string) => void;
   onSelectSchoolForInspection: (school: School) => void;
+  onNotify?: (title: string, message: string, type?: 'success' | 'info' | 'warning') => void;
 }
 
 export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
@@ -23,9 +26,11 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
   onAddSchool,
   onToggleStatus,
   onSelectSchoolForInspection,
+  onNotify,
 }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'suspended'>('all');
 
   // New School Form State
   const [newSchoolName, setNewSchoolName] = useState('');
@@ -35,11 +40,19 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
   const [newPhone, setNewPhone] = useState('');
   const [newAddress, setNewAddress] = useState('');
   const [newEmis, setNewEmis] = useState('');
+  const [newColor, setNewColor] = useState('#092451');
 
-  const filteredSchools = schools.filter(s => 
-    s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    s.code.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredSchools = schools.filter(s => {
+    const matchesSearch = 
+      s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      s.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.id.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    if (!matchesSearch) return false;
+    if (statusFilter === 'active') return s.status === 'active';
+    if (statusFilter === 'suspended') return s.status === 'suspended';
+    return true;
+  });
 
   const handleCreateSchool = (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,8 +74,8 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
         email: newEmail || `info@${newSchoolCode.toLowerCase()}.edu`,
         website: `https://${newSchoolCode.toLowerCase()}.edu`,
         signatureTitle: 'The Office of the Principal',
-        primaryColor: '#1e3a8a',
-        secondaryColor: '#b45309',
+        primaryColor: newColor,
+        secondaryColor: '#c27f1a',
       },
       admissionRules: {
         minAge: 13,
@@ -77,6 +90,15 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
 
     onAddSchool(newSchool);
     setShowAddModal(false);
+
+    if (onNotify) {
+      onNotify(
+        'New Institution Onboarded!',
+        `${newSchoolName} (${newSchool.code}) created with isolated D1 tables and R2 storage partition.`,
+        'success'
+      );
+    }
+
     setNewSchoolName('');
     setNewSchoolCode('');
     setNewMotto('');
@@ -84,28 +106,40 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
     setNewPhone('');
     setNewAddress('');
     setNewEmis('');
+    setNewColor('#092451');
+  };
+
+  const handleToggle = (schoolId: string, currentStatus: string, name: string) => {
+    onToggleStatus(schoolId);
+    if (onNotify) {
+      onNotify(
+        `Tenant ${currentStatus === 'active' ? 'Suspended' : 'Activated'}`,
+        `${name} is now ${currentStatus === 'active' ? 'suspended' : 'active'}.`,
+        currentStatus === 'active' ? 'warning' : 'success'
+      );
+    }
   };
 
   return (
     <div className="space-y-6">
       {/* Top Banner: SaaS Owner Overview */}
-      <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white rounded-2xl p-6 md:p-8 shadow-xl relative overflow-hidden">
+      <div className="bg-gradient-to-r from-crest-navy via-crest-navyDark to-crest-navy text-white rounded-3xl p-6 md:p-8 shadow-xl relative overflow-hidden border border-crest-navyDark">
         <div className="relative z-10">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-semibold uppercase tracking-wider mb-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-crest-gold text-xs font-bold uppercase tracking-wider mb-2 border border-white/20">
                 <ShieldCheck className="w-3.5 h-3.5" />
                 Super Admin Console • Global Multi-Tenant Control
               </div>
-              <h2 className="text-2xl md:text-3xl font-bold">Platform Overview & School Tenants</h2>
-              <p className="text-slate-300 text-sm mt-1 max-w-2xl">
-                You hold master control over all registered institutions. Each school operates in complete tenant isolation with dedicated letterhead, grading rules, and scoped access.
+              <h2 className="text-2xl md:text-3xl font-extrabold font-serif">Platform Overview & School Tenants</h2>
+              <p className="text-slate-300 text-xs md:text-sm mt-1 max-w-2xl leading-relaxed">
+                You hold master administrative authority across all registered institutions. Each school operates in complete tenant isolation with dedicated vector letterheads, Cloudflare D1 gradebooks, and scoped security.
               </p>
             </div>
 
             <button
               onClick={() => setShowAddModal(true)}
-              className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-lg hover:shadow-blue-500/25"
+              className="flex items-center space-x-2 bg-crest-gold hover:bg-crest-goldLight text-crest-navyDark px-5 py-3 rounded-2xl text-xs md:text-sm font-bold transition-all shadow-lg hover:shadow-glow-gold hover:scale-[1.02]"
             >
               <PlusCircle className="w-4 h-4" />
               <span>Register New School</span>
@@ -113,64 +147,95 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
           </div>
 
           {/* Infrastructure & Security Health Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8 pt-6 border-t border-slate-800 text-xs">
-            <div className="bg-slate-800/60 rounded-xl p-3 border border-slate-700/60">
-              <div className="text-slate-400 flex items-center gap-1.5">
-                <Building2 className="w-4 h-4 text-blue-400" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8 pt-6 border-t border-white/15 text-xs">
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 shadow-xs">
+              <div className="text-slate-300 flex items-center gap-1.5 font-medium text-[11px]">
+                <Building2 className="w-4 h-4 text-blue-300" />
                 Active School Tenants
               </div>
-              <div className="text-xl font-bold mt-1 text-white">{schools.length} Institutions</div>
+              <div className="text-xl font-extrabold mt-1 text-white">{schools.length} Institutions</div>
             </div>
 
-            <div className="bg-slate-800/60 rounded-xl p-3 border border-slate-700/60">
-              <div className="text-slate-400 flex items-center gap-1.5">
-                <Database className="w-4 h-4 text-emerald-400" />
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 shadow-xs">
+              <div className="text-slate-300 flex items-center gap-1.5 font-medium text-[11px]">
+                <Database className="w-4 h-4 text-emerald-300" />
                 Cloudflare D1 Reads
               </div>
-              <div className="text-xl font-bold mt-1 text-emerald-400">5M Free / Day</div>
+              <div className="text-xl font-extrabold mt-1 text-emerald-300">5M Free / Day</div>
             </div>
 
-            <div className="bg-slate-800/60 rounded-xl p-3 border border-slate-700/60">
-              <div className="text-slate-400 flex items-center gap-1.5">
-                <HardDrive className="w-4 h-4 text-purple-400" />
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 shadow-xs">
+              <div className="text-slate-300 flex items-center gap-1.5 font-medium text-[11px]">
+                <HardDrive className="w-4 h-4 text-purple-300" />
                 Cloudflare R2 Egress
               </div>
-              <div className="text-xl font-bold mt-1 text-purple-300">$0.00 Egress Fees</div>
+              <div className="text-xl font-extrabold mt-1 text-purple-300">$0.00 Egress Fees</div>
             </div>
 
-            <div className="bg-slate-800/60 rounded-xl p-3 border border-slate-700/60">
-              <div className="text-slate-400 flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-cyan-400" />
-                Firebase App Check
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 shadow-xs">
+              <div className="text-slate-300 flex items-center gap-1.5 font-medium text-[11px]">
+                <Radio className="w-4 h-4 text-amber-300 animate-pulse" />
+                App Check & RTDB
               </div>
-              <div className="text-xl font-bold mt-1 text-cyan-300">Protected (reCAPTCHA)</div>
+              <div className="text-xl font-extrabold mt-1 text-amber-300">reCAPTCHA Active</div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Schools Directory & Table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="p-5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
+      <div className="bg-white rounded-3xl shadow-sm border border-slate-200/90 overflow-hidden">
+        <div className="p-6 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center space-x-3">
-            <span className="p-2 bg-blue-50 text-blue-700 rounded-lg">
+            <span className="p-2.5 bg-crest-navy/5 text-crest-navy rounded-2xl border border-crest-navy/10">
               <Building2 className="w-5 h-5" />
             </span>
             <div>
-              <h3 className="font-bold text-slate-900 text-base">Registered Institutions ({schools.length})</h3>
+              <h3 className="font-bold text-crest-navy text-base font-serif">Registered Institutions ({schools.length})</h3>
               <p className="text-xs text-slate-500">Manage tenant activation and configure institution defaults</p>
             </div>
           </div>
 
-          <div className="relative w-full sm:w-64">
-            <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search school name or code..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+            {/* Status Filter */}
+            <div className="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl text-xs font-semibold">
+              <button
+                onClick={() => setStatusFilter('all')}
+                className={`px-3 py-1.5 rounded-lg transition-colors ${
+                  statusFilter === 'all' ? 'bg-white text-crest-navy font-bold shadow-xs' : 'text-slate-600'
+                }`}
+              >
+                All ({schools.length})
+              </button>
+              <button
+                onClick={() => setStatusFilter('active')}
+                className={`px-3 py-1.5 rounded-lg transition-colors ${
+                  statusFilter === 'active' ? 'bg-white text-emerald-800 font-bold shadow-xs' : 'text-slate-600'
+                }`}
+              >
+                Active ({schools.filter(s => s.status === 'active').length})
+              </button>
+              <button
+                onClick={() => setStatusFilter('suspended')}
+                className={`px-3 py-1.5 rounded-lg transition-colors ${
+                  statusFilter === 'suspended' ? 'bg-white text-rose-800 font-bold shadow-xs' : 'text-slate-600'
+                }`}
+              >
+                Suspended ({schools.filter(s => s.status === 'suspended').length})
+              </button>
+            </div>
+
+            {/* Search */}
+            <div className="relative flex-1 sm:w-60">
+              <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search school name or code..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-crest-navy"
+              />
+            </div>
           </div>
         </div>
 
@@ -188,20 +253,15 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
               {filteredSchools.map((school) => (
-                <tr key={school.id} className="hover:bg-slate-50/70 transition-colors">
+                <tr key={school.id} className="hover:bg-slate-50/80 transition-colors">
                   <td className="py-4 px-6">
                     <div className="flex items-center space-x-3">
-                      {school.letterhead.logoUrl ? (
-                        <img 
-                          src={school.letterhead.logoUrl} 
-                          alt="" 
-                          className="w-10 h-10 rounded-lg object-cover border border-slate-200" 
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-lg bg-blue-900 text-white flex items-center justify-center font-bold">
-                          {school.code.substring(0, 3)}
-                        </div>
-                      )}
+                      <div 
+                        className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white shadow-xs"
+                        style={{ backgroundColor: school.letterhead.primaryColor || '#092451' }}
+                      >
+                        <img src="/icon.svg" alt="" className="w-6 h-6 object-contain" />
+                      </div>
                       <div>
                         <div className="font-bold text-slate-900 text-sm">{school.name}</div>
                         <div className="text-[11px] text-slate-400 font-mono">{school.code} • {school.id}</div>
@@ -215,7 +275,7 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
                   <td className="py-4 px-4 font-mono font-medium text-slate-800">
                     Grades {school.admissionRules.openGrades.join(', ')}
                   </td>
-                  <td className="py-4 px-4 font-bold text-blue-900">
+                  <td className="py-4 px-4 font-bold text-crest-navy">
                     {school.admissionRules.passScoreThreshold}% Minimum
                   </td>
                   <td className="py-4 px-4">
@@ -225,9 +285,9 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
                         : 'bg-rose-100 text-rose-800'
                     }`}>
                       {school.status === 'active' ? (
-                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                       ) : (
-                        <XCircle className="w-3 h-3 text-rose-600" />
+                        <XCircle className="w-3.5 h-3.5 text-rose-600" />
                       )}
                       {school.status.toUpperCase()}
                     </span>
@@ -235,13 +295,13 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
                   <td className="py-4 px-6 text-right space-x-2">
                     <button
                       onClick={() => onSelectSchoolForInspection(school)}
-                      className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg font-medium text-xs transition-colors"
+                      className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-crest-navy rounded-xl font-bold text-xs transition-colors"
                     >
                       Inspect Tenant
                     </button>
                     <button
-                      onClick={() => onToggleStatus(school.id)}
-                      className={`px-3 py-1.5 rounded-lg font-medium text-xs transition-colors ${
+                      onClick={() => handleToggle(school.id, school.status, school.name)}
+                      className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-colors ${
                         school.status === 'active'
                           ? 'bg-amber-50 hover:bg-amber-100 text-amber-700'
                           : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'
@@ -259,106 +319,127 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
 
       {/* Add School Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200">
-            <h3 className="text-lg font-bold text-slate-900 mb-1">Onboard New School Tenant</h3>
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl border border-slate-200 my-auto animate-in fade-in duration-200">
+            <h3 className="text-xl font-bold text-crest-navy mb-1 font-serif">Onboard New School Tenant</h3>
             <p className="text-xs text-slate-500 mb-5">
               Registers a new isolated school tenant in the database with automated letterhead defaults.
             </p>
 
             <form onSubmit={handleCreateSchool} className="space-y-4 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">School Full Name</label>
+                <label className="block font-bold text-slate-700 mb-1">School Full Name</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. St. Jude's Collegiate Academy"
                   value={newSchoolName}
                   onChange={(e) => setNewSchoolName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-crest-navy"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">School Code (Unique)</label>
+                  <label className="block font-bold text-slate-700 mb-1">School Code (Unique)</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. STJU-01"
                     value={newSchoolCode}
                     onChange={(e) => setNewSchoolCode(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono uppercase"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-crest-navy font-mono uppercase"
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">EMIS / Reg. Number</label>
+                  <label className="block font-bold text-slate-700 mb-1">EMIS / Reg. Number</label>
                   <input
                     type="text"
                     placeholder="e.g. EMIS: 700912441"
                     value={newEmis}
                     onChange={(e) => setNewEmis(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-crest-navy font-mono"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">School Motto</label>
+                <label className="block font-bold text-slate-700 mb-1">School Motto</label>
                 <input
                   type="text"
                   placeholder="e.g. Veritas et Virtus"
                   value={newMotto}
                   onChange={(e) => setNewMotto(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-crest-navy italic"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Official Email</label>
+                  <label className="block font-bold text-slate-700 mb-1">Official Email</label>
                   <input
                     type="email"
                     placeholder="admin@stjude.edu"
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-crest-navy"
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Telephone</label>
+                  <label className="block font-bold text-slate-700 mb-1">Telephone</label>
                   <input
                     type="text"
                     placeholder="+27 21 555 0199"
                     value={newPhone}
                     onChange={(e) => setNewPhone(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-crest-navy"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Physical Address</label>
+                <label className="block font-bold text-slate-700 mb-1">Physical Address</label>
                 <input
                   type="text"
                   placeholder="12 St. Jude Lane, Constantia"
                   value={newAddress}
                   onChange={(e) => setNewAddress(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-crest-navy"
                 />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Institutional Primary Color</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={newColor}
+                    onChange={(e) => setNewColor(e.target.value)}
+                    className="w-10 h-8 rounded-xl border border-slate-200 cursor-pointer"
+                  />
+                  <span className="font-mono text-slate-500 text-[11px]">{newColor}</span>
+                </div>
+              </div>
+
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between text-[11px]">
+                <span className="flex items-center gap-1.5 text-slate-600 font-medium">
+                  <Sparkles className="w-3.5 h-3.5 text-crest-gold" />
+                  Isolation Schema:
+                </span>
+                <span className="font-mono text-crest-navy font-bold">Scoped D1 Tenant Partition</span>
               </div>
 
               <div className="flex items-center justify-end space-x-3 pt-4 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                  className="px-4 py-2 rounded-xl border border-slate-200 font-bold text-slate-700 hover:bg-slate-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold transition-colors shadow-sm"
+                  className="px-6 py-2.5 rounded-2xl bg-crest-navy hover:bg-crest-navyDark text-white font-bold transition-all shadow-md shadow-crest-navy/20"
                 >
                   Register School
                 </button>
