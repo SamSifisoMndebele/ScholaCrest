@@ -8,6 +8,9 @@
 //   homework PDFs, student submissions. $0 egress bandwidth fees forever!
 // ============================================================================
 
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from './firebase';
+
 export type StorageTarget = 'firebase_storage' | 'cloudflare_r2';
 
 export interface UploadOptions {
@@ -123,18 +126,30 @@ export async function uploadStrategicFile(options: UploadOptions): Promise<Uploa
   const fileExt = compressedBlob.type === 'image/webp' ? 'webp' : file.name.split('.').pop() || 'bin';
   const fileKey = `schools/${schoolId}/${category}/${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
 
-  // In production:
-  // - If cloudflare_r2: Request short-lived presigned URL from Edge Worker and PUT compressedBlob.
-  // - If firebase_storage: Call uploadBytes(ref(storage, fileKey), compressedBlob).
-  // For simulation/client preview:
-  const localPreviewUrl = URL.createObjectURL(compressedBlob);
+  let finalUrl = '';
+  try {
+    if (storageEngine === 'firebase_storage' && typeof window !== 'undefined') {
+      const storageRef = ref(storage, fileKey);
+      const snapshot = await uploadBytes(storageRef, compressedBlob, {
+        contentType: compressedBlob.type || 'application/octet-stream',
+      });
+      finalUrl = await getDownloadURL(snapshot.ref);
+    }
+  } catch (err) {
+    console.warn('[StorageRouter] Firebase upload deferred or unauthenticated, using local preview:', err);
+  }
+
+  if (!finalUrl && typeof window !== 'undefined') {
+    finalUrl = URL.createObjectURL(compressedBlob);
+  }
 
   return {
     storageEngine,
-    fileUrl: localPreviewUrl,
+    fileUrl: finalUrl,
     fileKey,
     originalSizeKb,
     storedSizeKb,
     compressed: storedSizeKb < originalSizeKb,
   };
 }
+

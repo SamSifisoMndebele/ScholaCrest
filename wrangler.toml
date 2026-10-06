@@ -1,0 +1,31 @@
+# ============================================================================
+# Cloudflare Worker & Edge Architecture Configuration (wrangler.toml)
+# Schola Crest - Multi-Tenant Edge Infrastructure
+# ============================================================================
+
+name = "scholacrest-edge-api"
+main = "src/backend/edgeWorker.ts"
+compatibility_date = "2026-03-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Cloudflare Account ID
+account_id = "ad04202662069380ff99c1219cb0f661"
+
+# --- Cloudflare D1 Relational Database Binding ---
+# Free Tier: 5,000,000 row reads/day, 100,000 row writes/day, 5 GB storage
+[[d1_databases]]
+binding = "DB"
+database_name = "scholacrest-db"
+database_id = "b23ad471-6e2d-4955-a01e-eae7f631ec41"
+
+# --- Cloudflare R2 Object Storage Bucket Binding ---
+# Free Tier: 10 GB storage/month, $0 Egress Bandwidth Fees FOREVER!
+[[r2_buckets]]
+binding = "R2_BUCKET"
+bucket_name = "scholacrest-documents"
+
+# --- Environment Variables at the Edge ---
+[vars]
+FIREBASE_PROJECT_ID = "schola-crest"
+APP_CHECK_PROJECT_NUMBER = "216455666235"
+ENVIRONMENT = "production"

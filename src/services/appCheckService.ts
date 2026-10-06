@@ -7,6 +7,9 @@
 // are blocked at the edge before consuming free-tier Firestore or Cloudflare D1 quotas!
 // ============================================================================
 
+import { getToken as getFirebaseAppCheckToken } from 'firebase/app-check';
+import { appCheck, initAppCheck, RECAPTCHA_ENTERPRISE_SITE_KEY } from './firebase';
+
 export interface AppCheckStatus {
   isInitialized: boolean;
   provider: 'reCAPTCHA-Enterprise' | 'reCAPTCHA-v3' | 'Custom-Attestation' | 'Development-Debug';
@@ -17,30 +20,31 @@ export interface AppCheckStatus {
 class AppCheckService {
   private status: AppCheckStatus = {
     isInitialized: false,
-    provider: 'Development-Debug',
+    provider: 'reCAPTCHA-Enterprise',
     enforceAtEdge: true,
   };
 
-  private currentToken: string = 'appcheck_attestation_dev_token_' + Math.random().toString(36).substring(2);
+  private devFallbackToken: string = 'appcheck_dev_token_' + Math.random().toString(36).substring(2);
+
+  constructor() {
+    this.initialize(RECAPTCHA_ENTERPRISE_SITE_KEY);
+  }
 
   /**
-   * Initializes Firebase App Check with reCAPTCHA Enterprise or Debug Provider
+   * Initializes Firebase App Check with reCAPTCHA Enterprise
    */
   public initialize(siteKey?: string) {
     if (typeof window === 'undefined') return;
 
-    if (siteKey) {
+    const instance = appCheck || initAppCheck();
+    if (instance && siteKey) {
       this.status = {
         isInitialized: true,
         provider: 'reCAPTCHA-Enterprise',
         enforceAtEdge: true,
         tokenExpiresAt: Date.now() + 3600 * 1000,
       };
-      // In production:
-      // import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
-      // initializeAppCheck(firebaseApp, { provider: new ReCaptchaEnterpriseProvider(siteKey), isTokenAutoRefreshEnabled: true });
     } else {
-      // Local development / zero-cost simulation mode
       this.status = {
         isInitialized: true,
         provider: 'Development-Debug',
@@ -54,7 +58,17 @@ class AppCheckService {
    * Returns current App Check Token to attach to API requests (X-Firebase-AppCheck header)
    */
   public async getToken(): Promise<string> {
-    return this.currentToken;
+    if (typeof window !== 'undefined' && appCheck) {
+      try {
+        const tokenResult = await getFirebaseAppCheckToken(appCheck);
+        if (tokenResult?.token) {
+          return tokenResult.token;
+        }
+      } catch (err) {
+        console.warn('[AppCheckService] Failed to retrieve live App Check token, falling back:', err);
+      }
+    }
+    return this.devFallbackToken;
   }
 
   public getStatus(): AppCheckStatus {

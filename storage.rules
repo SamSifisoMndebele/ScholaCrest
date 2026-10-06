@@ -13,7 +13,7 @@ service firebase.storage {
     }
 
     // User Profile Avatars (Max 200 KB)
-    match /users/{userId}/avatar.{ext} {
+    match /users/{userId}/{fileName} {
       allow read: if isAppCheckVerified();
       allow write: if isAppCheckVerified() 
                    && request.auth != null 
@@ -21,6 +21,7 @@ service firebase.storage {
                    && isValidImage()
                    && request.resource.size < 200 * 1024; // 200 KB max
     }
+
 
     // School Crests, Logos, Stamps & Signatures (Max 500 KB)
     match /schools/{schoolId}/branding/{fileName} {
