@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import type { School, UserRole } from '../types';
+import { Link, useNavigate } from 'react-router-dom';
+import type { School } from '../types';
 import { ScholaCrestLogo } from './ScholaCrestLogo';
 import { 
   Building2, 
@@ -24,17 +25,14 @@ import {
 
 interface LandingPageViewProps {
   schools: School[];
-  onSelectSchoolToApply: (school: School) => void;
-  onEnterPortal: (role: UserRole | 'applicant') => void;
   onSeedDatabase?: () => void;
 }
 
 export const LandingPageView: React.FC<LandingPageViewProps> = ({
   schools,
-  onSelectSchoolToApply,
-  onEnterPortal,
   onSeedDatabase,
 }) => {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGradeFilter, setSelectedGradeFilter] = useState<number | 'all'>('all');
 
@@ -93,25 +91,21 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
 
             {/* Portal & Apply Buttons */}
             <div className="flex items-center space-x-3">
-              <button
-                onClick={() => onEnterPortal('super_admin')}
+              <Link
+                to="/login"
                 className="hidden sm:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 hover:border-crest-navy text-crest-navy font-bold text-xs transition-all hover:bg-slate-50"
               >
                 <LogIn className="w-3.5 h-3.5" />
                 <span>Staff & Admin Portal</span>
-              </button>
+              </Link>
 
-              <button
-                onClick={() => {
-                  const defaultSchool = schools[0];
-                  if (defaultSchool) onSelectSchoolToApply(defaultSchool);
-                  else onEnterPortal('applicant');
-                }}
+              <Link
+                to="/apply"
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-crest-navy hover:bg-crest-navyDark text-white font-bold text-xs transition-all shadow-md shadow-crest-navy/20 hover:scale-[1.02]"
               >
                 <GraduationCap className="w-4 h-4 text-crest-gold" />
                 <span>Apply Online</span>
-              </button>
+              </Link>
             </div>
           </div>
         </div>
@@ -156,13 +150,13 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                 <span>Explore Available Schools ({schools.length})</span>
               </a>
 
-              <button
-                onClick={() => onEnterPortal('super_admin')}
+              <Link
+                to="/login"
                 className="px-6 py-3.5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-sm transition-all flex items-center gap-2 backdrop-blur-md"
               >
                 <Layers className="w-4 h-4 text-crest-gold" />
                 <span>Launch Institutional Console</span>
-              </button>
+              </Link>
             </div>
           </div>
 
@@ -331,15 +325,18 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
 
                       {/* Action CTA */}
                       <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
-                        <button
-                          onClick={() => onSelectSchoolToApply(school)}
-                          disabled={school.status !== 'active'}
-                          className="w-full py-2.5 px-4 rounded-xl bg-crest-navy hover:bg-crest-navyDark disabled:bg-slate-300 text-white font-bold text-xs transition-all shadow-xs flex items-center justify-center gap-2 group-hover:scale-[1.01]"
+                        <Link
+                          to={`/apply/${school.id}`}
+                          className={`w-full py-2.5 px-4 rounded-xl text-white font-bold text-xs transition-all shadow-xs flex items-center justify-center gap-2 group-hover:scale-[1.01] ${
+                            school.status === 'active'
+                              ? 'bg-crest-navy hover:bg-crest-navyDark'
+                              : 'bg-slate-300 pointer-events-none'
+                          }`}
                         >
                           <GraduationCap className="w-4 h-4 text-crest-gold" />
                           <span>Apply to {school.code}</span>
                           <ArrowRight className="w-3.5 h-3.5" />
-                        </button>
+                        </Link>
                       </div>
                     </div>
                   </div>
@@ -483,8 +480,8 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
 
               <div className="space-y-3">
                 <button
-                  onClick={() => onEnterPortal('super_admin')}
-                  className="w-full p-3.5 rounded-2xl bg-white/5 hover:bg-white/15 border border-white/10 text-left transition-all flex items-center justify-between group"
+                  onClick={() => navigate('/portal/super-admin')}
+                  className="w-full p-3.5 rounded-2xl bg-white/5 hover:bg-white/15 border border-white/10 text-left transition-all flex items-center justify-between group cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-xl bg-crest-navy text-white flex items-center justify-center font-bold text-xs">SA</div>
@@ -497,8 +494,8 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                 </button>
 
                 <button
-                  onClick={() => onEnterPortal('school_admin')}
-                  className="w-full p-3.5 rounded-2xl bg-white/5 hover:bg-white/15 border border-white/10 text-left transition-all flex items-center justify-between group"
+                  onClick={() => navigate('/portal/school-admin')}
+                  className="w-full p-3.5 rounded-2xl bg-white/5 hover:bg-white/15 border border-white/10 text-left transition-all flex items-center justify-between group cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xs">PR</div>
@@ -511,8 +508,8 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                 </button>
 
                 <button
-                  onClick={() => onEnterPortal('registrar')}
-                  className="w-full p-3.5 rounded-2xl bg-white/5 hover:bg-white/15 border border-white/10 text-left transition-all flex items-center justify-between group"
+                  onClick={() => navigate('/portal/registrar')}
+                  className="w-full p-3.5 rounded-2xl bg-white/5 hover:bg-white/15 border border-white/10 text-left transition-all flex items-center justify-between group cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-xl bg-amber-600 text-white flex items-center justify-center font-bold text-xs">RG</div>
@@ -525,8 +522,8 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                 </button>
 
                 <button
-                  onClick={() => onEnterPortal('teacher')}
-                  className="w-full p-3.5 rounded-2xl bg-white/5 hover:bg-white/15 border border-white/10 text-left transition-all flex items-center justify-between group"
+                  onClick={() => navigate('/portal/teacher')}
+                  className="w-full p-3.5 rounded-2xl bg-white/5 hover:bg-white/15 border border-white/10 text-left transition-all flex items-center justify-between group cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold text-xs">TC</div>
@@ -539,8 +536,8 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                 </button>
 
                 <button
-                  onClick={() => onEnterPortal('student')}
-                  className="w-full p-3.5 rounded-2xl bg-white/5 hover:bg-white/15 border border-white/10 text-left transition-all flex items-center justify-between group"
+                  onClick={() => navigate('/portal/student')}
+                  className="w-full p-3.5 rounded-2xl bg-white/5 hover:bg-white/15 border border-white/10 text-left transition-all flex items-center justify-between group cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-xs">ST</div>
@@ -573,9 +570,9 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
               <a href="#about" className="hover:text-crest-navy">About</a>
               <a href="#schools" className="hover:text-crest-navy">Schools ({schools.length})</a>
               <a href="#architecture" className="hover:text-crest-navy">Edge Architecture</a>
-              <button onClick={() => onEnterPortal('super_admin')} className="hover:text-crest-navy font-bold text-crest-navy">
+              <Link to="/login" className="hover:text-crest-navy font-bold text-crest-navy">
                 Staff Login
-              </button>
+              </Link>
             </div>
           </div>
 

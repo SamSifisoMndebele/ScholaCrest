@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import type { 
   School, 
-  UserRole, 
   OnlineApplication, 
   HomeworkAssignment, 
   SubjectAssessmentMark, 
@@ -17,28 +17,17 @@ import {
   INITIAL_REPORT_CARD 
 } from './services/dbRouter';
 import { api } from './services/api';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ProtectedRoute } from './components/ProtectedRoute';
 import { LandingPageView } from './components/LandingPageView';
-import { OfficialLetterhead } from './components/OfficialLetterhead';
-import { OfficialReportCard } from './components/OfficialReportCard';
+import { ApplyPage } from './pages/ApplyPage';
+import { LoginPage } from './pages/LoginPage';
+import { PortalLayout } from './pages/PortalLayout';
 import { SuperAdminView } from './components/SuperAdminView';
 import { SchoolAdminView } from './components/SchoolAdminView';
 import { RegistrarView } from './components/RegistrarView';
 import { TeacherView } from './components/TeacherView';
 import { StudentView } from './components/StudentView';
-import { ApplicantView } from './components/ApplicantView';
-import { ScholaCrestLogo } from './components/ScholaCrestLogo';
-import { 
-  ShieldCheck, 
-  Building2, 
-  Database, 
-  HardDrive, 
-  Radio,
-  CheckCircle2,
-  AlertCircle,
-  Home,
-  ArrowLeft,
-  Loader2
-} from 'lucide-react';
 
 interface ToastMessage {
   id: string;
@@ -47,17 +36,30 @@ interface ToastMessage {
   type: 'success' | 'info' | 'warning';
 }
 
-export function App() {
-  // Navigation Mode: 'landing' (public visitor landing page) or 'portal' (internal SMS view)
-  const [viewMode, setViewMode] = useState<'landing' | 'portal'>('landing');
+function PortalIndexRedirect() {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
 
+  switch (user.role) {
+    case 'super_admin':
+      return <Navigate to="/portal/super-admin" replace />;
+    case 'school_admin':
+      return <Navigate to="/portal/school-admin" replace />;
+    case 'registrar':
+      return <Navigate to="/portal/registrar" replace />;
+    case 'teacher':
+      return <Navigate to="/portal/teacher" replace />;
+    case 'student':
+      return <Navigate to="/portal/student" replace />;
+    default:
+      return <Navigate to="/portal/super-admin" replace />;
+  }
+}
+
+export function App() {
   // Real Database State
   const [schools, setSchools] = useState<School[]>([]);
   const [activeSchoolId, setActiveSchoolId] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Active Role Simulation (Super Admin, Principal, Registrar, Teacher, Student, Applicant)
-  const [currentRole, setCurrentRole] = useState<UserRole | 'applicant'>('super_admin');
 
   // Multi-Tenant Data Stores (Loaded from real D1 Database)
   const [applications, setApplications] = useState<OnlineApplication[]>([]);
@@ -67,7 +69,7 @@ export function App() {
   const [subjects, setSubjects] = useState<Subject[]>(INITIAL_SUBJECTS);
   const [reportCard, setReportCard] = useState<TermReportCard>(INITIAL_REPORT_CARD);
 
-  // Letter & Report Card Modal Viewers
+  // Modals
   const [activeLetterApp, setActiveLetterApp] = useState<OnlineApplication | null>(null);
   const [showReportCardModal, setShowReportCardModal] = useState(false);
 
@@ -102,7 +104,7 @@ export function App() {
     },
   };
 
-  // Demo User Objects for role simulation
+  // Demo user objects for role simulation
   const teacherUser = INITIAL_USERS.find(u => u.uid === 'usr_teacher_elena')!;
   const studentUser = INITIAL_USERS.find(u => u.uid === 'usr_student_ethan')!;
 
@@ -125,11 +127,8 @@ export function App() {
   useEffect(() => {
     async function loadInitialSchools() {
       try {
-        setIsLoading(true);
         let liveSchools = await api.getSchools();
         if (!liveSchools || liveSchools.length === 0) {
-          // If fresh database, auto-seed starter data
-          console.log('[App] Database is fresh, seeding initial schools...');
           await api.seedDatabase();
           liveSchools = await api.getSchools();
         }
@@ -139,8 +138,6 @@ export function App() {
         }
       } catch (err) {
         console.warn('[App] Real DB initialization notice:', err);
-      } finally {
-        setIsLoading(false);
       }
     }
     loadInitialSchools();
@@ -180,7 +177,7 @@ export function App() {
     } catch (err: any) {
       console.error('Failed to create school:', err);
       setSchools(prev => [newSchool, ...prev]);
-      showToast('School Added', `${newSchool.name} added.`, 'info');
+      showToast('School Added', `${newSchool.name} registered.`, 'info');
     }
   };
 
@@ -216,7 +213,6 @@ export function App() {
 
   const handleSeedDatabase = async () => {
     try {
-      setIsLoading(true);
       await api.seedDatabase(true);
       const freshSchools = await api.getSchools();
       setSchools(freshSchools);
@@ -229,8 +225,6 @@ export function App() {
     } catch (err: any) {
       console.error('Seeding failed:', err);
       showToast('Seeding Error', err.message, 'warning');
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -320,306 +314,170 @@ export function App() {
     }
   };
 
-  // If on Landing Page view, render the public landing experience
-  if (viewMode === 'landing') {
-    return (
-      <div className="relative">
-        <LandingPageView
-          schools={schools}
-          onSelectSchoolToApply={(school) => {
-            setActiveSchoolId(school.id);
-            setCurrentRole('applicant');
-            setViewMode('portal');
-            showToast('Admissions Portal', `Applying to ${school.name} (${school.code})`, 'info');
-          }}
-          onEnterPortal={(role) => {
-            setCurrentRole(role);
-            setViewMode('portal');
-          }}
-          onSeedDatabase={handleSeedDatabase}
-        />
-
-        {/* Global Loading Overlay if initial seeding/loading */}
-        {isLoading && (
-          <div className="fixed bottom-6 left-6 z-50 bg-slate-900/90 text-white px-4 py-2.5 rounded-2xl flex items-center gap-2.5 text-xs shadow-xl border border-white/10 backdrop-blur-md">
-            <Loader2 className="w-4 h-4 animate-spin text-crest-gold" />
-            <span>Connecting to Cloudflare D1 Relational Edge...</span>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // Otherwise, render the Internal Management & Role Portal
   return (
-    <div className="min-h-screen bg-slate-50/60 text-slate-800 flex flex-col font-sans">
-      {/* Top Navigation & Role Simulator Header */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 gap-3">
-            {/* Left: Home Button + Logo + School Tenant Picker */}
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={() => setViewMode('landing')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors border border-slate-200/60"
-                title="Return to Public Landing Page"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Landing Page</span>
-              </button>
-
-              <div className="h-6 w-px bg-slate-200 hidden sm:block" />
-
-              <ScholaCrestLogo size={38} variant="icon-only" />
-              <div>
-                <div className="font-extrabold text-sm sm:text-base tracking-tight text-crest-navy flex items-center gap-1 font-sans leading-none">
-                  SCHOLA CREST <span className="text-[10px] bg-blue-100 text-crest-navy px-1.5 py-0.5 rounded font-sans font-semibold">SaaS</span>
-                </div>
-                {/* School Tenant Dropdown */}
-                <div className="flex items-center gap-1 text-xs text-slate-500 mt-0.5">
-                  <Building2 className="w-3.5 h-3.5 text-crest-navy flex-shrink-0" />
-                  <select
-                    value={activeSchoolId}
-                    onChange={(e) => setActiveSchoolId(e.target.value)}
-                    className="font-semibold text-slate-800 bg-transparent border-none focus:outline-none cursor-pointer pr-3 text-xs truncate max-w-[180px] sm:max-w-[240px]"
-                  >
-                    {schools.map(s => (
-                      <option key={s.id} value={s.id}>
-                        {s.name} ({s.code})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Architecture & Live D1 Status Badges */}
-            <div className="hidden xl:flex items-center space-x-2 text-[11px] font-mono">
-              <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                App Check: Active
-              </span>
-              <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-purple-50 text-purple-800 border border-purple-200 font-bold">
-                <HardDrive className="w-3.5 h-3.5 text-purple-600" />
-                R2: $0 Egress
-              </span>
-              <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-50 text-blue-800 border border-blue-200 font-bold">
-                <Database className="w-3.5 h-3.5 text-crest-navy" />
-                D1: Online
-              </span>
-            </div>
-
-            {/* Role Switcher (Simulates login across all user privileges) */}
-            <div className="flex items-center space-x-1 sm:space-x-2">
-              <div className="flex items-center bg-slate-100 p-1 rounded-2xl text-xs font-bold overflow-x-auto max-w-[420px]">
-                <button
-                  onClick={() => setCurrentRole('super_admin')}
-                  className={`px-2.5 py-1.5 rounded-xl transition-all whitespace-nowrap ${
-                    currentRole === 'super_admin' ? 'bg-crest-navy text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                  title="Super Admin: System Owner controlling all schools"
-                >
-                  Super Admin
-                </button>
-                <button
-                  onClick={() => setCurrentRole('school_admin')}
-                  className={`px-2.5 py-1.5 rounded-xl transition-all whitespace-nowrap ${
-                    currentRole === 'school_admin' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                  title="Principal: Configures school letterhead, branding, and subjects"
-                >
-                  Principal
-                </button>
-                <button
-                  onClick={() => setCurrentRole('registrar')}
-                  className={`px-2.5 py-1.5 rounded-xl transition-all whitespace-nowrap ${
-                    currentRole === 'registrar' ? 'bg-amber-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                  title="Registrar: Reviews applicant evaluations & issues acceptance letters"
-                >
-                  Registrar
-                </button>
-                <button
-                  onClick={() => setCurrentRole('teacher')}
-                  className={`px-2.5 py-1.5 rounded-xl transition-all whitespace-nowrap ${
-                    currentRole === 'teacher' ? 'bg-purple-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                  title="Teacher: Scoped strictly to assigned subjects"
-                >
-                  Teacher
-                </button>
-                <button
-                  onClick={() => setCurrentRole('student')}
-                  className={`px-2.5 py-1.5 rounded-xl transition-all whitespace-nowrap ${
-                    currentRole === 'student' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                  title="Student: Accesses homework and views official term reports"
-                >
-                  Learner
-                </button>
-                <button
-                  onClick={() => setCurrentRole('applicant')}
-                  className={`px-2.5 py-1.5 rounded-xl transition-all whitespace-nowrap ${
-                    currentRole === 'applicant' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                  title="Public Portal: Prospective applicants apply online"
-                >
-                  Apply Online
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {currentRole === 'super_admin' && (
-          <SuperAdminView
-            schools={schools}
-            onAddSchool={handleAddSchool}
-            onToggleStatus={handleToggleSchoolStatus}
-            onDeleteSchool={handleDeleteSchool}
-            onSeedDatabase={handleSeedDatabase}
-            onSelectSchoolForInspection={(sch) => {
-              setActiveSchoolId(sch.id);
-              setCurrentRole('school_admin');
-              showToast('Switched to Tenant', `Now inspecting ${sch.name} as Principal.`, 'info');
-            }}
-            onNotify={showToast}
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* 1. Public Landing Page */}
+          <Route 
+            path="/" 
+            element={
+              <LandingPageView 
+                schools={schools} 
+                onSeedDatabase={handleSeedDatabase} 
+              />
+            } 
           />
-        )}
 
-        {currentRole === 'school_admin' && (
-          <SchoolAdminView
-            school={currentSchool}
-            classes={classes}
-            subjects={subjects}
-            onUpdateSchool={handleUpdateSchool}
-            onPreviewLetterhead={() => setActiveLetterApp(applications[0] || null)}
-            onPreviewReportCard={() => setShowReportCardModal(true)}
-            onNotify={showToast}
+          {/* 2. Public Online Admissions Pages */}
+          <Route 
+            path="/apply" 
+            element={
+              <ApplyPage 
+                schools={schools} 
+                onSubmitApplication={handleSubmitApplication} 
+                onNotify={showToast} 
+              />
+            } 
           />
-        )}
-
-        {currentRole === 'registrar' && (
-          <RegistrarView
-            school={currentSchool}
-            applications={applications}
-            onUpdateStatus={handleUpdateApplicationStatus}
-            onOpenLetter={(app) => setActiveLetterApp(app)}
-            onNotify={showToast}
+          <Route 
+            path="/apply/:schoolId" 
+            element={
+              <ApplyPage 
+                schools={schools} 
+                onSubmitApplication={handleSubmitApplication} 
+                onNotify={showToast} 
+              />
+            } 
           />
-        )}
 
-        {currentRole === 'teacher' && (
-          <TeacherView
-            school={currentSchool}
-            teacher={teacherUser}
-            subjects={subjects}
-            homework={homework}
-            marks={marks}
-            onAddHomework={handleAddHomework}
-            onAddOrUpdateMark={handleAddOrUpdateMark}
-            onNotify={showToast}
+          {/* 3. Authentication & Login */}
+          <Route 
+            path="/login" 
+            element={<LoginPage schools={schools} />} 
           />
-        )}
 
-        {currentRole === 'student' && (
-          <StudentView
-            school={currentSchool}
-            student={studentUser}
-            subjects={subjects}
-            homework={homework}
-            reportCard={reportCard}
-            onOpenReportCard={() => setShowReportCardModal(true)}
-            onNotify={showToast}
-          />
-        )}
-
-        {currentRole === 'applicant' && (
-          <ApplicantView
-            school={currentSchool}
-            onSubmitApplication={handleSubmitApplication}
-            onOpenLetter={(app) => setActiveLetterApp(app)}
-            onNotify={showToast}
-          />
-        )}
-      </main>
-
-      {/* Modal 1: Official School Letterhead (Client Rendered, $0 Storage) */}
-      {activeLetterApp && (
-        <OfficialLetterhead
-          school={currentSchool}
-          application={activeLetterApp}
-          onClose={() => setActiveLetterApp(null)}
-        />
-      )}
-
-      {/* Modal 2: Official Term Report Card (Client Rendered, $0 Storage) */}
-      {showReportCardModal && (
-        <OfficialReportCard
-          school={currentSchool}
-          reportCard={reportCard}
-          onClose={() => setShowReportCardModal(false)}
-        />
-      )}
-
-      {/* Floating Toast Notification Container */}
-      <div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2.5 max-w-sm w-full pointer-events-none">
-        {toasts.map(toast => (
-          <div
-            key={toast.id}
-            className={`pointer-events-auto p-4 rounded-2xl shadow-2xl border text-xs flex items-start gap-3 backdrop-blur-md transition-all animate-in slide-in-from-bottom-5 duration-200 ${
-              toast.type === 'success' 
-                ? 'bg-slate-900/95 text-white border-emerald-500/40' 
-                : toast.type === 'warning'
-                ? 'bg-amber-950/95 text-white border-amber-500/40'
-                : 'bg-slate-900/95 text-white border-blue-500/40'
-            }`}
+          {/* 4. Multi-Tenant Role Portals (Protected Routing) */}
+          <Route 
+            path="/portal" 
+            element={
+              <ProtectedRoute>
+                <PortalLayout
+                  schools={schools}
+                  activeSchoolId={activeSchoolId}
+                  onSelectSchool={(id) => setActiveSchoolId(id)}
+                  reportCard={reportCard}
+                  activeLetterApp={activeLetterApp}
+                  showReportCardModal={showReportCardModal}
+                  onCloseLetter={() => setActiveLetterApp(null)}
+                  onCloseReportCard={() => setShowReportCardModal(false)}
+                  toasts={toasts}
+                  onDismissToast={dismissToast}
+                />
+              </ProtectedRoute>
+            }
           >
-            <div className="p-1 rounded-lg mt-0.5">
-              {toast.type === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
-              {toast.type === 'warning' && <AlertCircle className="w-4 h-4 text-amber-400" />}
-              {toast.type === 'info' && <Radio className="w-4 h-4 text-blue-400" />}
-            </div>
-            <div className="flex-1">
-              <div className="font-bold text-slate-100">{toast.title}</div>
-              <div className="text-[11px] text-slate-300 mt-0.5 leading-snug">{toast.message}</div>
-            </div>
-            <button
-              onClick={() => dismissToast(toast.id)}
-              className="text-slate-400 hover:text-white font-bold ml-1 text-xs cursor-pointer"
-            >
-              ✕
-            </button>
-          </div>
-        ))}
-      </div>
+            {/* Auto-redirect /portal to appropriate role dashboard */}
+            <Route index element={<PortalIndexRedirect />} />
 
-      {/* Footer */}
-      <footer className="no-print bg-white border-t border-slate-200 py-6 text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center space-x-2">
-            <ScholaCrestLogo size={22} variant="icon-only" />
-            <span className="font-bold text-slate-800">Schola Crest Multi-Tenant SMS</span>
-            <span>• Protected by Firebase App Check & Cloudflare Edge</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setViewMode('landing')}
-              className="text-crest-navy hover:underline font-bold flex items-center gap-1"
-            >
-              <Home className="w-3.5 h-3.5" />
-              <span>Landing Page</span>
-            </button>
-            <span className="font-mono text-[11px] text-slate-400">
-              Active Tenant: <strong className="text-crest-navy">{currentSchool.name} ({currentSchool.code})</strong>
-            </span>
-          </div>
-        </div>
-      </footer>
-    </div>
+            {/* Super Admin */}
+            <Route 
+              path="super-admin" 
+              element={
+                <ProtectedRoute allowedRoles={['super_admin']}>
+                  <SuperAdminView
+                    schools={schools}
+                    onAddSchool={handleAddSchool}
+                    onToggleStatus={handleToggleSchoolStatus}
+                    onDeleteSchool={handleDeleteSchool}
+                    onSeedDatabase={handleSeedDatabase}
+                    onSelectSchoolForInspection={(sch) => {
+                      setActiveSchoolId(sch.id);
+                      showToast('Switched to Tenant', `Now inspecting ${sch.name} as Principal.`, 'info');
+                    }}
+                    onNotify={showToast}
+                  />
+                </ProtectedRoute>
+              } 
+            />
+
+            {/* School Admin / Principal */}
+            <Route 
+              path="school-admin" 
+              element={
+                <ProtectedRoute allowedRoles={['school_admin', 'super_admin']}>
+                  <SchoolAdminView
+                    school={currentSchool}
+                    classes={classes}
+                    subjects={subjects}
+                    onUpdateSchool={handleUpdateSchool}
+                    onPreviewLetterhead={() => setActiveLetterApp(applications[0] || null)}
+                    onPreviewReportCard={() => setShowReportCardModal(true)}
+                    onNotify={showToast}
+                  />
+                </ProtectedRoute>
+              } 
+            />
+
+            {/* Admissions Registrar */}
+            <Route 
+              path="registrar" 
+              element={
+                <ProtectedRoute allowedRoles={['registrar', 'school_admin', 'super_admin']}>
+                  <RegistrarView
+                    school={currentSchool}
+                    applications={applications}
+                    onUpdateStatus={handleUpdateApplicationStatus}
+                    onOpenLetter={(app) => setActiveLetterApp(app)}
+                    onNotify={showToast}
+                  />
+                </ProtectedRoute>
+              } 
+            />
+
+            {/* Teacher */}
+            <Route 
+              path="teacher" 
+              element={
+                <ProtectedRoute allowedRoles={['teacher', 'school_admin', 'super_admin']}>
+                  <TeacherView
+                    school={currentSchool}
+                    teacher={teacherUser}
+                    subjects={subjects}
+                    homework={homework}
+                    marks={marks}
+                    onAddHomework={handleAddHomework}
+                    onAddOrUpdateMark={handleAddOrUpdateMark}
+                    onNotify={showToast}
+                  />
+                </ProtectedRoute>
+              } 
+            />
+
+            {/* Student */}
+            <Route 
+              path="student" 
+              element={
+                <ProtectedRoute allowedRoles={['student', 'school_admin', 'super_admin']}>
+                  <StudentView
+                    school={currentSchool}
+                    student={studentUser}
+                    subjects={subjects}
+                    homework={homework}
+                    reportCard={reportCard}
+                    onOpenReportCard={() => setShowReportCardModal(true)}
+                    onNotify={showToast}
+                  />
+                </ProtectedRoute>
+              } 
+            />
+          </Route>
+
+          {/* Catch-all fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 
