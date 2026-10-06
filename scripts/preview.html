@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>ScholaCrest SVG Showcase</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f8fafc;
+      padding: 40px;
+      margin: 0;
+      color: #0f172a;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 32px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+    .title {
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #64748b;
+      margin-bottom: 20px;
+    }
+    .preview-box {
+      width: 100%;
+      height: 220px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+  </style>
+</head>
+<body>
+  <h1 style="text-align: center; margin-bottom: 8px;">ScholaCrest Official Vector SVG Suite</h1>
+  <p style="text-align: center; color: #64748b; margin-bottom: 40px;">Direct 1:1 Vector Conversion from Original Crest Logo</p>
+
+  <div class="grid">
+    <!-- 1. Icon Only -->
+    <div class="card">
+      <div class="title">Variant 1: Icon Only (Pure Shield Vector)</div>
+      <div class="preview-box">
+        <img src="../public/scholacrest-icon.svg" style="width: 160px; height: 190px;" alt="Icon Only" />
+      </div>
+    </div>
+
+    <!-- 2. Icon Badge -->
+    <div class="card">
+      <div class="title">Variant 2: Icon on Squircle Badge Container</div>
+      <div class="preview-box">
+        <img src="../public/scholacrest-badge.svg" style="width: 180px; height: 180px;" alt="Icon Badge" />
+      </div>
+    </div>
+
+    <!-- 3. Horizontal Lockup (Text Right) -->
+    <div class="card" style="grid-column: span 2;">
+      <div class="title">Variant 3: Primary Horizontal Lockup (Text on Right)</div>
+      <div class="preview-box">
+        <img src="../public/scholacrest-horizontal.svg" style="max-height: 110px; width: auto;" alt="Horizontal Lockup" />
+      </div>
+    </div>
+
+    <!-- 4. Vertical / Stacked Lockup -->
+    <div class="card" style="grid-column: span 2;">
+      <div class="title">Variant 4: Classical Crest Lockup (Centered Stack)</div>
+      <div class="preview-box">
+        <img src="../public/scholacrest-vertical.svg" style="max-height: 200px; width: auto;" alt="Vertical Lockup" />
+      </div>
+    </div>
+  </div>
+</body>
+</html>

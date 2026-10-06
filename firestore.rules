@@ -1,0 +1,130 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // =========================================================================
+    // GLOBAL SECURITY HELPER FUNCTIONS
+    // =========================================================================
+    
+    // 1. Enforce Firebase App Check: Rejects scrapers, curl, and bots
+    function isAppCheckVerified() {
+      return request.app != null;
+    }
+    
+    // 2. User Authentication Check
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // 3. Super Admin has unrestricted platform oversight
+    function isSuperAdmin() {
+      return isAuthenticated() && request.auth.token.role == 'super_admin';
+    }
+    
+    // 4. Strict Multi-Tenant Isolation Check
+    function belongsToSchool(schoolId) {
+      return isAuthenticated() && (request.auth.token.schoolId == schoolId || isSuperAdmin());
+    }
+    
+    // 5. Role Verification Helpers
+    function isSchoolAdmin(schoolId) {
+      return belongsToSchool(schoolId) && request.auth.token.role == 'school_admin';
+    }
+    
+    function isRegistrar(schoolId) {
+      return belongsToSchool(schoolId) && (request.auth.token.role == 'registrar' || isSchoolAdmin(schoolId));
+    }
+    
+    function isTeacher(schoolId) {
+      return belongsToSchool(schoolId) && request.auth.token.role == 'teacher';
+    }
+    
+    function isStudent(schoolId) {
+      return belongsToSchool(schoolId) && request.auth.token.role == 'student';
+    }
+
+    // =========================================================================
+    // MULTI-TENANT INSTITUTION RULES
+    // =========================================================================
+
+    // Schools (Tenant Settings & Letterhead Configuration)
+    match /schools/{schoolId} {
+      // Any authenticated user can read their own school profile; public can read basic branding for application
+      allow read: if isAppCheckVerified();
+      // Only Super Admin can register or delete school tenants
+      allow create, delete: if isAppCheckVerified() && isSuperAdmin();
+      // School Admin (Principal) can update letterhead branding and admission cutoff criteria
+      allow update: if isAppCheckVerified() && (isSuperAdmin() || isSchoolAdmin(schoolId));
+      
+      // Online Admissions Applications
+      match /applications/{applicationId} {
+        // Public applicants can submit online applications (validated by schema)
+        allow create: if isAppCheckVerified() 
+                      && request.resource.data.applicantName is string 
+                      && request.resource.data.gradeApplied is int;
+        // Applicant can view their own application with matching email/ref
+        allow read: if isAppCheckVerified() && (
+          isRegistrar(schoolId) || 
+          (isAuthenticated() && resource.data.email == request.auth.token.email)
+        );
+        // Only Registrar or Principal can validate, approve, or reject applications
+        allow update: if isAppCheckVerified() && isRegistrar(schoolId);
+        allow delete: if isAppCheckVerified() && isSchoolAdmin(schoolId);
+      }
+
+      // Classes & Grades
+      match /classes/{classId} {
+        allow read: if isAppCheckVerified() && belongsToSchool(schoolId);
+        allow write: if isAppCheckVerified() && isSchoolAdmin(schoolId);
+      }
+
+      // Subjects (Curricula)
+      match /subjects/{subjectId} {
+        allow read: if isAppCheckVerified() && belongsToSchool(schoolId);
+        allow write: if isAppCheckVerified() && isSchoolAdmin(schoolId);
+      }
+
+      // Homework & Course Modules
+      match /homework/{homeworkId} {
+        allow read: if isAppCheckVerified() && belongsToSchool(schoolId);
+        // Teachers can create and manage homework for their assigned subjects only
+        allow create, update, delete: if isAppCheckVerified() && (
+          isSchoolAdmin(schoolId) || 
+          (isTeacher(schoolId) && request.auth.token.subjects.hasAny([request.resource.data.subjectId]))
+        );
+      }
+
+      // Student Assessment Marks & Gradebooks
+      match /marks/{markId} {
+        allow read: if isAppCheckVerified() && (
+          isRegistrar(schoolId) || 
+          (isStudent(schoolId) && resource.data.studentId == request.auth.uid) ||
+          (isTeacher(schoolId) && request.auth.token.subjects.hasAny([resource.data.subjectId]))
+        );
+        // Teachers can enter marks for their assigned subjects
+        allow create, update: if isAppCheckVerified() && (
+          isSchoolAdmin(schoolId) || 
+          (isTeacher(schoolId) && request.auth.token.subjects.hasAny([request.resource.data.subjectId]))
+        );
+        allow delete: if isAppCheckVerified() && isSchoolAdmin(schoolId);
+      }
+
+      // Published Academic Term Report Cards
+      match /reportCards/{reportId} {
+        // Students can only view their own published report cards
+        allow read: if isAppCheckVerified() && (
+          isRegistrar(schoolId) || 
+          (isStudent(schoolId) && resource.data.studentId == request.auth.uid && resource.data.status == 'published')
+        );
+        // Only Principal / School Admin can publish or finalize report cards
+        allow write: if isAppCheckVerified() && isSchoolAdmin(schoolId);
+      }
+    }
+    
+    // User Profiles / Custom Claims Mirror
+    match /users/{userId} {
+      allow read: if isAppCheckVerified() && (isAuthenticated() && request.auth.uid == userId || isSuperAdmin());
+      allow write: if isAppCheckVerified() && isSuperAdmin();
+    }
+  }
+}

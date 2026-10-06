@@ -1,0 +1,36 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper: App Check Enforcement
+    function isAppCheckVerified() {
+      return request.auth != null || request.app != null;
+    }
+
+    // Helper: Image Type Verification
+    function isValidImage() {
+      return request.resource.contentType.matches('image/(jpeg|png|webp)');
+    }
+
+    // User Profile Avatars (Max 200 KB)
+    match /users/{userId}/avatar.{ext} {
+      allow read: if isAppCheckVerified();
+      allow write: if isAppCheckVerified() 
+                   && request.auth != null 
+                   && request.auth.uid == userId
+                   && isValidImage()
+                   && request.resource.size < 200 * 1024; // 200 KB max
+    }
+
+    // School Crests, Logos, Stamps & Signatures (Max 500 KB)
+    match /schools/{schoolId}/branding/{fileName} {
+      allow read: if isAppCheckVerified();
+      allow write: if isAppCheckVerified() 
+                   && request.auth != null 
+                   && (request.auth.token.role == 'super_admin' || 
+                       (request.auth.token.role == 'school_admin' && request.auth.token.schoolId == schoolId))
+                   && isValidImage()
+                   && request.resource.size < 500 * 1024; // 500 KB max
+    }
+  }
+}

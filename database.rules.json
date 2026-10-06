@@ -1,0 +1,24 @@
+{
+  "rules": {
+    "presence": {
+      "$schoolId": {
+        ".read": "auth != null && (auth.token.schoolId == $schoolId || auth.token.role == 'super_admin')",
+        "$userId": {
+          ".write": "auth != null && auth.uid == $userId"
+        }
+      }
+    },
+    "notifications": {
+      "$userId": {
+        ".read": "auth != null && auth.uid == $userId",
+        ".write": "auth != null"
+      }
+    },
+    "admissionsCounter": {
+      "$schoolId": {
+        ".read": "auth != null && (auth.token.schoolId == $schoolId || auth.token.role == 'super_admin')",
+        ".write": "auth != null && (auth.token.role == 'registrar' || auth.token.role == 'school_admin')"
+      }
+    }
+  }
+}
