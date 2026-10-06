@@ -26,7 +26,7 @@ export const ScholaCrestLogo: React.FC<ScholaCrestLogoProps> = ({
     return (
       <img
         src="/icon.svg"
-        alt="ScholaCrest Emblem"
+        alt="Schola Crest Emblem"
         style={{ width: pixelSize, height: pixelSize }}
         className={`object-contain flex-shrink-0 select-none ${className}`}
       />
@@ -42,7 +42,7 @@ export const ScholaCrestLogo: React.FC<ScholaCrestLogoProps> = ({
       >
         <img 
           src="/icon.svg" 
-          alt="ScholaCrest Emblem" 
+          alt="Schola Crest Emblem" 
           className="w-full h-full object-contain" 
         />
       </div>
@@ -54,19 +54,19 @@ export const ScholaCrestLogo: React.FC<ScholaCrestLogoProps> = ({
     return (
       <img
         src="/logo.svg"
-        alt="ScholaCrest Logo"
+        alt="Schola Crest Logo"
         style={{ height: pixelSize }}
         className={`object-contain select-none max-w-full ${className}`}
       />
     );
   }
 
-  // 4. Default: Horizontal Lockup (Emblem on Left, ScholaCrest Text on Right)
+  // 4. Default: Horizontal Lockup (Emblem on Left, Schola Crest Text on Right)
   return (
     <div className={`inline-flex items-center select-none ${className}`}>
       <img
         src="/logo-horizontal.svg"
-        alt="ScholaCrest School Management System"
+        alt="Schola Crest School Management System"
         style={{ height: pixelSize }}
         className="object-contain max-w-full"
       />

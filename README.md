@@ -102,7 +102,7 @@ Instead of relying on a single expensive service, **ScholaCrest** strategically 
 ## 📂 Repository File Structure
 
 ```
-school-management-system/
+schola-crest/
 ├── public/
 │   ├── scholacrest-logo.png         # Official brand crest emblem
 │   └── favicon.svg                  # Vector browser icon
@@ -149,7 +149,7 @@ school-management-system/
 ### 2. Installation
 ```bash
 # Clone or navigate to the repository
-cd school-management-system
+cd schola-crest
 
 # Install dependencies
 npm install

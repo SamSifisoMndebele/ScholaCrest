@@ -235,7 +235,7 @@ export const OfficialLetterhead: React.FC<OfficialLetterheadProps> = ({ school, 
             <div className="mt-12 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between text-[10px] text-slate-400 font-mono">
               <span className="flex items-center gap-1.5">
                 <img src="/icon.svg" alt="" className="w-3.5 h-3.5 object-contain" />
-                <span>Security Attestation: Firebase App Check & SCHOLACREST Cloud Verified</span>
+                <span>Security Attestation: Firebase App Check & SCHOLA CREST Cloud Verified</span>
               </span>
               <span>Document Checksum: {application.id}-{Date.now().toString(36)}</span>
             </div>

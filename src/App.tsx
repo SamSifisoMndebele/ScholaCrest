@@ -185,7 +185,7 @@ export function App() {
               <ScholaCrestLogo size={42} variant="icon-only" />
               <div>
                 <div className="font-extrabold text-base tracking-tight text-crest-navy flex items-center gap-1.5 font-sans leading-none">
-                  SCHOLACREST <span className="text-[10px] bg-blue-100 text-crest-navy px-1.5 py-0.5 rounded font-sans font-semibold">SaaS</span>
+                  SCHOLA CREST <span className="text-[10px] bg-blue-100 text-crest-navy px-1.5 py-0.5 rounded font-sans font-semibold">SaaS</span>
                 </div>
                 {/* School Tenant Dropdown */}
                 <div className="flex items-center gap-1 text-xs text-slate-500 mt-1">
@@ -417,7 +417,7 @@ export function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center space-x-2">
             <ScholaCrestLogo size={22} variant="icon-only" />
-            <span className="font-bold text-slate-800">ScholaCrest Multi-Tenant SMS</span>
+            <span className="font-bold text-slate-800">Schola Crest Multi-Tenant SMS</span>
             <span>• Protected by Firebase App Check & Cloudflare Edge</span>
           </div>
           <div className="font-mono text-[11px] text-slate-400">
