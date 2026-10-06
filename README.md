@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/scholacrest-logo.png" alt="ScholaCrest Logo" width="180" style="border-radius: 24px;" />
+  <img src="public/scholacrest-horizontal.svg" alt="ScholaCrest Logo" width="460" />
 </p>
 
 <h1 align="center">ScholaCrest</h1>
@@ -202,6 +202,36 @@ npm run build
 2. **Storage Rules:** Paste `storage.rules` into Firebase Console $\rightarrow$ Storage $\rightarrow$ Rules.
 3. **RTDB Rules:** Paste `database.rules.json` into Firebase Console $\rightarrow$ Realtime Database $\rightarrow$ Rules.
 4. **Cloudflare D1 Schema:** In Cloudflare Dashboard $\rightarrow$ Workers & Pages $\rightarrow$ D1 SQL Database $\rightarrow$ Console tab, execute `schema.sql`.
+
+---
+
+## 🎨 ScholaCrest Official Vector SVG Suite
+
+The official heraldic crest is converted into 100% resolution-independent, razor-sharp vector SVG. Multiple variants are provided in the `/public` folder and as a typed React component:
+
+| Variant | File | Optimal Usage | Description |
+| :--- | :--- | :--- | :--- |
+| **Icon Only** | `public/scholacrest-icon.svg` | Favicons, Avatars, 16px–64px icons | Tightly cropped shield vector emblem (no borders, no text). |
+| **Icon Badge** | `public/scholacrest-badge.svg` | App Store Icons, Web Manifest | Shield emblem framed on a rounded squircle badge container. |
+| **Horizontal Lockup** | `public/scholacrest-horizontal.svg` | SaaS Navigation Bar, Documents | Shield emblem on left + bold `SCHOLACREST` and subtitle on right. |
+| **Vertical / Stacked** | `public/scholacrest-vertical.svg` | Splash Screens, Official Seal, Covers | Centered shield emblem stacked above `SCHOLACREST` and subtitle. |
+
+### React Component Usage:
+```tsx
+import { ScholaCrestLogo } from './components/ScholaCrestLogo';
+
+// 1. Text on Right (Default for modern SaaS headers)
+<ScholaCrestLogo variant="text-right" size={42} />
+
+// 2. Pure Shield Emblem (Icon only)
+<ScholaCrestLogo variant="icon-only" size={32} />
+
+// 3. Squircle App Badge
+<ScholaCrestLogo variant="icon-badge" size={48} />
+
+// 4. Centered Vertical Stack
+<ScholaCrestLogo variant="vertical" size={64} />
+```
 
 ---
 
